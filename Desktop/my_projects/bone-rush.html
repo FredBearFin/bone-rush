@@ -25,6 +25,9 @@ body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
 #hint { font-size:11px; color:#666; letter-spacing:1px; }
 #bn { font-size:13px; color:#ffe000; min-height:18px; margin-bottom:4px; }
 #mm { position:absolute; bottom:14px; right:14px; border:2px solid #555; }
+#charge-bar { font-size:13px; color:#ffaa00; letter-spacing:2px; min-height:18px; margin-bottom:2px; }
+#combo-disp { font-size:15px; color:#ff6600; text-shadow:1px 1px #000; min-height:20px; margin-bottom:2px; }
+#dodge-txt { font-size:20px; color:#00ffff; text-shadow:2px 2px #000; min-height:24px; margin-bottom:4px; letter-spacing:3px; }
 
 /* SCREENS */
 .scr {
@@ -66,8 +69,11 @@ body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
   </div>
   <div id="bc">
     <div id="bn"></div>
+    <div id="dodge-txt"></div>
+    <div id="combo-disp"></div>
+    <div id="charge-bar"></div>
     <div id="msg"></div>
-    <div id="hint">A/D or MOUSE: Turn &nbsp;|&nbsp; W/S: Move &nbsp;|&nbsp; E: Grab/Drop &nbsp;|&nbsp; CLICK: Bite &nbsp;|&nbsp; SHIFT: Sprint</div>
+    <div id="hint">A/D or MOUSE: Turn &nbsp;|&nbsp; W/S: Move &nbsp;|&nbsp; E: Grab/Drop &nbsp;|&nbsp; Hold CLICK: Charge Bite &nbsp;|&nbsp; SHIFT: Sprint &nbsp;|&nbsp; SPACE: Dodge &nbsp;|&nbsp; Q: Growl</div>
   </div>
   <canvas id="mm" width="130" height="130"></canvas>
 </div>
@@ -88,7 +94,8 @@ body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
   <button class="cb" id="sb" onclick="startGame()">START GAME</button>
   <div class="ctrl">
     A / D or Mouse: Turn &nbsp;&bull;&nbsp; W / S: Move &nbsp;&bull;&nbsp; E: Pick Up / Drop<br>
-    Left Click: Bite &nbsp;&bull;&nbsp; Shift: Sprint &nbsp;&bull;&nbsp; Walk into yellow den to score
+    Hold Left Click: Charge Bite (release to fire) &nbsp;&bull;&nbsp; Shift: Sprint<br>
+    Space: Dodge Roll &nbsp;&bull;&nbsp; Q: Growl (Fear Aura) &nbsp;&bull;&nbsp; Walk into yellow den to score
   </div>
 </div>
 
@@ -195,8 +202,20 @@ var G = {
   msgTimer:0,
   biteT:0, biteCd:0.55,
   iframes:0,
-  combo:0, comboT:0,
+  // Combat combo (consecutive bites within 1.5s)
+  comboCount:0, comboTimer:0,
   cls:'mutt',
+  // Dodge roll
+  dodgeT:0, dodgeCd:0, dodgeDur:0.5, dodgeInvincDur:0.3,
+  dodgeVx:0, dodgeVz:0,
+  // Charged bite
+  chargeHeld:false, chargeT:0, chargeMax:1.0,
+  // Screen shake
+  shakeT:0, shakeMag:0,
+  // Growl
+  growlCd:0,
+  // Alpha bark timer
+  alphaBarkT:0,
 };
 
 var player = {
@@ -293,8 +312,17 @@ function mkDog(col, collarCol, sc) {
   bim.position.set(0, 0.78, 1.22); bim.visible=false; g.add(bim);
   g.userData.bim = bim;
 
+  // Store original mesh materials for hit flash restore
+  g.userData.origEmissives = [];
+  g.traverse(function(child) {
+    if (child.isMesh && child.material && child.material.emissive !== undefined) {
+      g.userData.origEmissives.push({mesh: child, em: child.material.emissive.getHex()});
+    }
+  });
+
   g.scale.setScalar(sc);
   g.userData.wt = 0;
+  g.userData.hitFlashT = 0;
   return g;
 }
 
@@ -523,39 +551,70 @@ function initPlayer() {
 }
 
 // ─────────────────────────────────────────────
+// COMBAT HELPERS
+// ─────────────────────────────────────────────
+function hitFlashEnemy(e) {
+  // Flash mesh emissive to red for 0.15s
+  e.mesh.userData.hitFlashT = 0.15;
+  e.mesh.traverse(function(child) {
+    if (child.isMesh && child.material && child.material.emissive !== undefined) {
+      child.material.emissive.setHex(0xFF0000);
+    }
+  });
+}
+
+function restoreEnemyEmissive(e) {
+  e.mesh.traverse(function(child) {
+    if (child.isMesh && child.material && child.material.emissive !== undefined) {
+      // Restore original emissive
+      var orig = 0;
+      for (var j = 0; j < e.mesh.userData.origEmissives.length; j++) {
+        if (e.mesh.userData.origEmissives[j].mesh === child) {
+          orig = e.mesh.userData.origEmissives[j].em;
+          break;
+        }
+      }
+      // pitbull rage overrides restore
+      if (e.tk === 'pitbull' && e.rageMode) {
+        child.material.emissive.setHex(0x441100);
+      } else {
+        child.material.emissive.setHex(orig);
+      }
+    }
+  });
+}
+
+function applyKnockback(posVec, fromX, fromZ, dist) {
+  var dx = posVec.x - fromX;
+  var dz = posVec.z - fromZ;
+  var len = Math.sqrt(dx*dx+dz*dz)||1;
+  posVec.x += (dx/len)*dist;
+  posVec.z += (dz/len)*dist;
+  posVec.x = Math.max(-W+2, Math.min(W-2, posVec.x));
+  posVec.z = Math.max(-W+2, Math.min(W-2, posVec.z));
+}
+
+function startScreenShake(mag, dur) {
+  G.shakeT = dur || 0.3;
+  G.shakeMag = mag || 0.35;
+}
+
+// ─────────────────────────────────────────────
 // PLAYER UPDATE — TANK CONTROLS
 // ─────────────────────────────────────────────
 function updatePlayer(dt) {
   var cls = player.cls;
 
-  // Rotate: A/D keys + mouse
-  player.facing -= mdx * 0.003;
-  mdx = 0;
-  if (KB.KeyA) player.facing -= ROT_SPD * dt;
-  if (KB.KeyD) player.facing += ROT_SPD * dt;
-
-  // Stamina
-  var sprint = (KB.ShiftLeft||KB.ShiftRight) && (KB.KeyW||KB.KeyS);
-  if (sprint) player.sp = Math.max(0, player.sp - 28*dt);
-  else        player.sp = Math.min(player.maxSp, player.sp + 16*dt);
-
-  var spd = (sprint && player.sp>5) ? cls.spd*1.65 :
-            player.holdingBone ? cls.spd*0.68 : cls.spd;
-
-  // Move: W forward, S backward (slower)
-  var fw = 0;
-  if (KB.KeyW) fw = 1;
-  if (KB.KeyS) fw = -0.65;
-
-  if (fw !== 0) {
-    var nx = player.pos.x + Math.sin(player.facing) * fw * spd * dt;
-    var nz = player.pos.z + Math.cos(player.facing) * fw * spd * dt;
-
-    // Bounds
+  // Dodge roll update
+  if (G.dodgeT > 0) {
+    G.dodgeT -= dt;
+    if (G.dodgeCd > 0) G.dodgeCd -= dt;
+    // Move in dodge direction
+    var dodgeSpd = 11;
+    var nx = player.pos.x + G.dodgeVx * dodgeSpd * dt;
+    var nz = player.pos.z + G.dodgeVz * dodgeSpd * dt;
     nx = Math.max(-W+1, Math.min(W-1, nx));
     nz = Math.max(-W+1, Math.min(W-1, nz));
-
-    // Obstacle push-out
     for (var i=0; i<G.obs.length; i++) {
       var o=G.obs[i], dx2=nx-o.x, dz2=nz-o.z;
       var dd=Math.sqrt(dx2*dx2+dz2*dz2), md2=o.r+0.52;
@@ -563,17 +622,68 @@ function updatePlayer(dt) {
     }
     player.pos.x = nx;
     player.pos.z = nz;
+    // Dip mesh during roll
+    player.mesh.position.y = player.pos.y - 0.22;
+    // Invincibility first 0.3s of roll
+    if (G.dodgeT > G.dodgeDur - G.dodgeInvincDur) {
+      G.iframes = 0.05; // keep refreshing iframes while in invinc window
+    }
+  } else {
+    if (G.dodgeCd > 0) G.dodgeCd -= dt;
+
+    // Rotate: A/D keys + mouse
+    player.facing -= mdx * 0.003;
+    mdx = 0;
+    if (KB.KeyA) player.facing -= ROT_SPD * dt;
+    if (KB.KeyD) player.facing += ROT_SPD * dt;
+
+    // Stamina
+    var sprint = (KB.ShiftLeft||KB.ShiftRight) && (KB.KeyW||KB.KeyS);
+    if (sprint) player.sp = Math.max(0, player.sp - 28*dt);
+    else        player.sp = Math.min(player.maxSp, player.sp + 16*dt);
+
+    var spd = (sprint && player.sp>5) ? cls.spd*1.65 :
+              player.holdingBone ? cls.spd*0.68 : cls.spd;
+
+    // Move: W forward, S backward (slower)
+    var fw = 0;
+    if (KB.KeyW) fw = 1;
+    if (KB.KeyS) fw = -0.65;
+
+    if (fw !== 0) {
+      var nx = player.pos.x + Math.sin(player.facing) * fw * spd * dt;
+      var nz = player.pos.z + Math.cos(player.facing) * fw * spd * dt;
+
+      // Bounds
+      nx = Math.max(-W+1, Math.min(W-1, nx));
+      nz = Math.max(-W+1, Math.min(W-1, nz));
+
+      // Obstacle push-out
+      for (var i=0; i<G.obs.length; i++) {
+        var o=G.obs[i], dx2=nx-o.x, dz2=nz-o.z;
+        var dd=Math.sqrt(dx2*dx2+dz2*dz2), md2=o.r+0.52;
+        if(dd<md2&&dd>0.001){nx=o.x+(dx2/dd)*md2; nz=o.z+(dz2/dd)*md2;}
+      }
+      player.pos.x = nx;
+      player.pos.z = nz;
+    }
   }
 
   // Stick to terrain
   player.pos.y = th(player.pos.x, player.pos.z);
 
-  // Mesh
-  player.mesh.position.copy(player.pos);
+  // Mesh position (dodge roll adjusts y separately above)
+  if (G.dodgeT <= 0) {
+    player.mesh.position.copy(player.pos);
+  } else {
+    player.mesh.position.x = player.pos.x;
+    player.mesh.position.z = player.pos.z;
+  }
   player.mesh.rotation.y = player.facing;
 
   // Walk animation
-  if (fw !== 0) {
+  var fw2 = (KB.KeyW ? 1 : 0) + (KB.KeyS ? 1 : 0);
+  if (fw2 !== 0 || G.dodgeT > 0) {
     player.mesh.userData.wt += dt * 9;
     var wt = player.mesh.userData.wt;
     var legs = player.mesh.userData.legs;
@@ -605,7 +715,21 @@ function updatePlayer(dt) {
 
   if (G.iframes>0) G.iframes-=dt;
   if (G.biteT>0) G.biteT-=dt;
-  if (G.comboT>0){G.comboT-=dt; if(G.comboT<=0)G.combo=0;}
+  if (G.growlCd>0) G.growlCd-=dt;
+
+  // Combo timer
+  if (G.comboTimer>0) {
+    G.comboTimer-=dt;
+    if (G.comboTimer<=0) G.comboCount=0;
+  }
+
+  // Charge bite update
+  if (G.chargeHeld) {
+    G.chargeT = Math.min(G.chargeT + dt, G.chargeMax);
+  }
+
+  // Screen shake update
+  if (G.shakeT > 0) G.shakeT -= dt;
 }
 
 // ─────────────────────────────────────────────
@@ -625,6 +749,15 @@ function updateCamera(dt) {
   camSmooth.z += (tz - camSmooth.z)*s;
 
   cam.position.copy(camSmooth);
+
+  // Screen shake offset
+  if (G.shakeT > 0) {
+    var shakeFactor = G.shakeT * G.shakeMag;
+    cam.position.x += rnd(-shakeFactor, shakeFactor);
+    cam.position.y += rnd(-shakeFactor*0.5, shakeFactor*0.5);
+    cam.position.z += rnd(-shakeFactor, shakeFactor);
+  }
+
   cam.lookAt(player.pos.x, ph+1.0, player.pos.z);
 }
 
@@ -661,8 +794,8 @@ function deliverBone() {
   if(!player.holdingBone)return;
   var b=player.holdingBone;
   G.score+=b.value;
-  G.combo++; G.comboT=3;
-  var bonus=G.combo>1?G.combo-1:0;
+  G.comboCount++; G.comboTimer=3;
+  var bonus=G.comboCount>1?G.comboCount-1:0;
   if(bonus>0)G.score+=bonus;
   document.getElementById('sc').textContent='BONES: '+G.score;
   scene.remove(b.mesh);
@@ -671,28 +804,143 @@ function deliverBone() {
   player.mesh.userData.bim.visible=false;
   player.hp=Math.min(player.maxHp,player.hp+12);
   var lbl=b.golden?'GOLDEN BONE!':b.big?'Big bone!':'Bone!';
-  showMsg(lbl+' +'+b.value+(G.combo>1?' x'+G.combo+' COMBO +'+bonus+'!':''),2.8);
+  showMsg(lbl+' +'+b.value+(G.comboCount>1?' x'+G.comboCount+' COMBO +'+bonus+'!':''),2.8);
   setTimeout(function(){if(!G.dead)spawnBone();}, rnd(2000,4000));
 }
 
-function tryBite() {
-  if(player.holdingBone){showMsg('Drop bone first!',1.5);return;}
-  if(G.biteT>0)return;
-  G.biteT=G.biteCd;
-  var hit=false;
-  for(var i=0;i<G.enemies.length;i++){
-    var e=G.enemies[i];
-    if(e.dead)continue;
+function tryDodge() {
+  if (G.dodgeT > 0) return;
+  if (G.dodgeCd > 0) return;
+  if (player.sp < 15) return;
+  G.dodgeT = G.dodgeDur;
+  G.dodgeCd = 2.0;
+  player.sp = Math.max(0, player.sp - 15);
+  G.dodgeVx = Math.sin(player.facing);
+  G.dodgeVz = Math.cos(player.facing);
+  showDodgeTxt();
+  mkParticles(player.pos.x, player.pos.y+0.2, player.pos.z, 0x88CCFF, 6);
+}
+
+var dodgeTxtTimer = 0;
+function showDodgeTxt() {
+  dodgeTxtTimer = 0.6;
+  document.getElementById('dodge-txt').textContent = 'DODGE!';
+}
+
+function tryGrowl() {
+  if (G.growlCd > 0) { showMsg('Growl cooling down... ('+(G.growlCd.toFixed(1))+'s)',1.2); return; }
+  if (player.sp < 20) { showMsg('Not enough stamina to growl!',1.5); return; }
+  player.sp = Math.max(0, player.sp - 20);
+  G.growlCd = 5.0;
+  showMsg('GRRRROWL! They flee!', 2.2);
+  mkParticles(player.pos.x, player.pos.y+0.8, player.pos.z, 0xFFAA00, 18);
+  for (var i=0; i<G.enemies.length; i++) {
+    var e = G.enemies[i];
+    if (e.dead) continue;
+    if (e.tk === 'bulldog' || e.tk === 'pitbull' || e.tk === 'alpha') continue;
     var dx=e.pos.x-player.pos.x, dz=e.pos.z-player.pos.z;
-    if(dx*dx+dz*dz < player.cls.bite*player.cls.bite){
-      e.hp-=player.cls.dmg;
-      mkParticles(e.pos.x, e.pos.y+0.6, e.pos.z, 0xFF8800, 8);
-      if(e.hp<=0) killEnemy(e);
-      else { if(e.holdingBone)eDropBone(e); e.state='stun'; e.stunT=0.38; }
-      hit=true;
+    if (dx*dx+dz*dz < 8*8) {
+      e.state = 'flee';
+      e.fleeTimer = 2.0 + (e.tk === 'swift' ? 1.0 : 0);
     }
   }
-  if(!hit) mkParticles(player.pos.x+Math.sin(player.facing)*1.5, player.pos.y+0.6, player.pos.z+Math.cos(player.facing)*1.5, 0xDDDDDD, 3);
+}
+
+function startCharge() {
+  if (player.holdingBone) return;
+  if (G.biteT > 0) return;
+  G.chargeHeld = true;
+  G.chargeT = 0;
+}
+
+function releaseCharge() {
+  if (!G.chargeHeld) return;
+  var charged = G.chargeT;
+  G.chargeHeld = false;
+  G.chargeT = 0;
+  executeBite(charged);
+}
+
+function executeBite(chargeAmt) {
+  if (G.biteT > 0) return;
+  G.biteT = G.biteCd;
+
+  var isFullCharge = chargeAmt >= G.chargeMax * 0.9;
+  var isPartialCharge = chargeAmt > 0.2;
+
+  // Lunge forward 1.5 units in 0.12s
+  var lungeX = player.pos.x + Math.sin(player.facing)*1.5;
+  var lungeZ = player.pos.z + Math.cos(player.facing)*1.5;
+  lungeX = Math.max(-W+1, Math.min(W-1, lungeX));
+  lungeZ = Math.max(-W+1, Math.min(W-1, lungeZ));
+  player.pos.x = lungeX;
+  player.pos.z = lungeZ;
+
+  // Combo multiplier
+  var comboMult = 1.0;
+  if (G.comboCount === 1) comboMult = 1.0;
+  else if (G.comboCount === 2) comboMult = 1.5;
+  else if (G.comboCount === 3) comboMult = 2.0;
+  else if (G.comboCount >= 4) comboMult = 2.5;
+
+  var dmgBase = player.cls.dmg * comboMult;
+  var finalDmg = isFullCharge ? dmgBase * 3 : dmgBase;
+  var biteRange = player.cls.bite + (isFullCharge ? 1.5 : 0);
+
+  var hit = false;
+  var hitCount = 0;
+
+  for (var i=0; i<G.enemies.length; i++) {
+    var e = G.enemies[i];
+    if (e.dead) continue;
+    var dx = e.pos.x - player.pos.x;
+    var dz = e.pos.z - player.pos.z;
+    var distSq = dx*dx+dz*dz;
+    var inRange = distSq < biteRange*biteRange;
+
+    // Full charge hits ALL in range, partial/normal hits first in range
+    if (!inRange) continue;
+    if (!isFullCharge && hitCount > 0) continue;
+
+    hit = true;
+    hitCount++;
+
+    e.hp -= finalDmg;
+    hitFlashEnemy(e);
+    mkParticles(e.pos.x, e.pos.y+0.6, e.pos.z, 0xFF8800, 8);
+
+    // Knockback enemy 2 units
+    applyKnockback(e.pos, player.pos.x, player.pos.z, 2.0);
+
+    if (e.hp <= 0) {
+      killEnemy(e);
+    } else {
+      if (e.holdingBone) eDropBone(e);
+      e.state = 'stun';
+      e.stunT = isFullCharge ? 0.55 : 0.38;
+    }
+  }
+
+  // Build bite combo
+  if (hit) {
+    G.comboCount++;
+    G.comboTimer = 1.5;
+    if (G.comboCount > 1) {
+      showComboText(G.comboCount);
+    }
+  } else {
+    mkParticles(player.pos.x+Math.sin(player.facing)*1.5, player.pos.y+0.6, player.pos.z+Math.cos(player.facing)*1.5, 0xDDDDDD, 3);
+  }
+
+  if (isFullCharge && hitCount > 0) {
+    showMsg('CHARGED BITE! x'+hitCount+' hit'+(hitCount>1?'s':'')+'!', 2.0);
+  }
+}
+
+var comboTxtTimer = 0;
+function showComboText(count) {
+  comboTxtTimer = 1.2;
+  document.getElementById('combo-disp').textContent = 'COMBO x'+count+'!';
 }
 
 // ─────────────────────────────────────────────
@@ -722,13 +970,68 @@ function spawnEnemy(tk) {
     stunT:0,detectR:13+rnd(0,5),biteR:2.1,
     dead:false,hg:hg,hfg:hfg,
     wanderAngle:rnd(0,Math.PI*2),wanderT:0,
+    // Per-type combat state
+    flankAngle: rnd(0, Math.PI*2),   // stray flanking offset
+    alertDelay: 0,                    // stray pack alert delay
+    swiftDashCd: 0,                   // swift dash cooldown
+    swiftRetreating: false,
+    swiftRetreatTarget: null,
+    bulldogWindup: false,
+    bulldogWindupT: 0,
+    bulldogCharging: false,
+    bulldogChargeDir: null,
+    bulldogChargeT: 0,
+    bulldogRecovery: 0,
+    bulldogLastPlayerPos: null,
+    rageMode: false,
+    rageFlashT: 0,
+    fleeTimer: 0,
   };
   G.enemies.push(e);
   return e;
 }
 
+// Count enemies in a given state
+function countAttackingEnemies() {
+  var n = 0;
+  for (var i=0; i<G.enemies.length; i++) {
+    if (!G.enemies[i].dead && G.enemies[i].state==='attack') n++;
+  }
+  return n;
+}
+
+// Get angular offset for this enemy among all attackers (surround behavior)
+function getSurroundAngle(e) {
+  var attackers = [];
+  for (var i=0; i<G.enemies.length; i++) {
+    if (!G.enemies[i].dead && G.enemies[i].state==='attack') attackers.push(G.enemies[i]);
+  }
+  var idx = attackers.indexOf(e);
+  if (idx < 0 || attackers.length <= 1) return 0;
+  return (idx / attackers.length) * Math.PI * 2;
+}
+
+// Get nearest alpha (for presence buff)
+function nearestAlpha(pos, range) {
+  for (var i=0; i<G.enemies.length; i++) {
+    var e = G.enemies[i];
+    if (e.dead || e.tk !== 'alpha') continue;
+    var dx=e.pos.x-pos.x, dz=e.pos.z-pos.z;
+    if (dx*dx+dz*dz < range*range) return e;
+  }
+  return null;
+}
+
 function updateEnemy(e, dt) {
   if(e.dead)return;
+
+  // Hit flash update
+  if (e.mesh.userData.hitFlashT > 0) {
+    e.mesh.userData.hitFlashT -= dt;
+    if (e.mesh.userData.hitFlashT <= 0) {
+      restoreEnemyEmissive(e);
+    }
+  }
 
   // HP bar
   e.hg.position.copy(e.pos); e.hg.position.y+=2.3*e.td.sc;
@@ -741,54 +1044,31 @@ function updateEnemy(e, dt) {
     e.mesh.position.copy(e.pos); return;
   }
 
+  // Alpha presence buff: enemies near alpha get +15% speed
+  var alphaBoost = 1.0;
+  if (e.tk !== 'alpha') {
+    var nearAlpha = nearestAlpha(e.pos, 12);
+    if (nearAlpha) alphaBoost = 1.15;
+  }
+
   e.atkT+=dt;
   var pd=e.pos.distanceTo(player.pos);
 
-  if(e.state==='wander'){
-    if(!e.holdingBone&&pd<e.detectR&&Math.random()<e.td.agg*dt*2){e.state='attack';}
-    else{
-      var nb=nearestFreeBone2(e.pos,22);
-      if(nb){e.targetBone=nb;e.state='seek';}
-      else{
-        e.wanderT-=dt;
-        if(e.wanderT<=0){e.wanderAngle+=rnd(-1.8,1.8);e.wanderT=rnd(1,2.5);}
-        eMove(e,Math.cos(e.wanderAngle)*e.td.spd*0.5,Math.sin(e.wanderAngle)*e.td.spd*0.5,dt);
-      }
-    }
-  }
-  else if(e.state==='seek'){
-    if(!e.targetBone||e.targetBone.owner!==null){e.targetBone=null;e.state='wander';}
-    else if(!e.holdingBone&&pd<3.5&&e.td.agg>0.55){e.state='attack';}
-    else{
-      var bp=e.targetBone.pos;
-      var bdx=bp.x-e.pos.x,bdz=bp.z-e.pos.z,bd=Math.sqrt(bdx*bdx+bdz*bdz);
-      if(bd<1.3){eGrab(e,e.targetBone);e.state='carry';}
-      else eMove(e,(bdx/bd)*e.td.spd,(bdz/bd)*e.td.spd,dt);
-    }
-  }
-  else if(e.state==='carry'){
-    if(!e.holdingBone){e.state='wander';}
-    else{
-      var ddx=G.eDen.x-e.pos.x,ddz=G.eDen.z-e.pos.z,dd2=Math.sqrt(ddx*ddx+ddz*ddz);
-      if(dd2<3.2){eScore(e);e.state='wander';}
-      else eMove(e,(ddx/dd2)*e.td.spd*0.85,(ddz/dd2)*e.td.spd*0.85,dt);
-    }
-  }
-  else if(e.state==='attack'){
-    if(e.holdingBone){e.state='carry';}
-    else if(pd>e.detectR*1.6){e.state='wander';}
-    else if(e.hp<e.maxHp*0.18){e.state='flee';}
-    else{
-      if(pd<e.biteR){if(e.atkT>=e.atkCd){eBite(e);e.atkT=0;}}
-      else{
-        var adx=player.pos.x-e.pos.x,adz=player.pos.z-e.pos.z,al=Math.sqrt(adx*adx+adz*adz)||1;
-        eMove(e,(adx/al)*e.td.spd,(adz/al)*e.td.spd,dt);
-      }
-    }
-  }
-  else if(e.state==='flee'){
-    if(e.hp>e.maxHp*0.38){e.state='wander';}
-    else{var fx=e.pos.x-player.pos.x,fz=e.pos.z-player.pos.z,fl=Math.sqrt(fx*fx+fz*fz)||1;eMove(e,(fx/fl)*e.td.spd,(fz/fl)*e.td.spd,dt);}
+  // ────────────────────────────────────────────
+  // PER-TYPE AI
+  // ────────────────────────────────────────────
+  if (e.tk === 'stray') {
+    updateStray(e, dt, pd, alphaBoost);
+  } else if (e.tk === 'swift') {
+    updateSwift(e, dt, pd, alphaBoost);
+  } else if (e.tk === 'bulldog') {
+    updateBulldog(e, dt, pd, alphaBoost);
+  } else if (e.tk === 'pitbull') {
+    updatePitbull(e, dt, pd, alphaBoost);
+  } else if (e.tk === 'alpha') {
+    updateAlpha(e, dt, pd);
+  } else {
+    updateGeneric(e, dt, pd, alphaBoost);
   }
 
   // Walk anim
@@ -804,6 +1084,575 @@ function updateEnemy(e, dt) {
   e.mesh.rotation.y=e.facing;
 }
 
+// ─────────────────────────────────────────────
+// STRAY AI
+// ─────────────────────────────────────────────
+function updateStray(e, dt, pd, alphaBoost) {
+  var spd = e.td.spd * alphaBoost;
+
+  if (e.state === 'wander') {
+    if (!e.holdingBone && pd < e.detectR && Math.random() < e.td.agg*dt*2) {
+      e.state = 'attack';
+      alertPackNearby(e, 0);
+    } else {
+      var nb = nearestFreeBone2(e.pos, 22);
+      if (nb) { e.targetBone=nb; e.state='seek'; }
+      else {
+        e.wanderT-=dt;
+        if(e.wanderT<=0){e.wanderAngle+=rnd(-1.8,1.8);e.wanderT=rnd(1,2.5);}
+        eMove(e,Math.cos(e.wanderAngle)*spd*0.5,Math.sin(e.wanderAngle)*spd*0.5,dt);
+      }
+    }
+  }
+  else if (e.state === 'seek') {
+    if(!e.targetBone||e.targetBone.owner!==null){e.targetBone=null;e.state='wander';}
+    else if(!e.holdingBone&&pd<3.5&&e.td.agg>0.55){e.state='attack'; alertPackNearby(e,0);}
+    else {
+      var bp=e.targetBone.pos;
+      var bdx=bp.x-e.pos.x,bdz=bp.z-e.pos.z,bd=Math.sqrt(bdx*bdx+bdz*bdz);
+      if(bd<1.3){eGrab(e,e.targetBone);e.state='carry';}
+      else eMove(e,(bdx/bd)*spd,(bdz/bd)*spd,dt);
+    }
+  }
+  else if (e.state === 'carry') {
+    if(!e.holdingBone){e.state='wander';}
+    else{
+      var ddx=G.eDen.x-e.pos.x,ddz=G.eDen.z-e.pos.z,dd2=Math.sqrt(ddx*ddx+ddz*ddz);
+      if(dd2<3.2){eScore(e);e.state='wander';}
+      else eMove(e,(ddx/dd2)*spd*0.85,(ddz/dd2)*spd*0.85,dt);
+    }
+  }
+  else if (e.state === 'attack') {
+    if(e.holdingBone){e.state='carry';}
+    else if(pd > e.detectR*1.6){e.state='wander';}
+    else if(e.hp < e.maxHp*0.18){e.state='flee'; e.fleeTimer=4.0;}
+    else {
+      if (pd < e.biteR) {
+        if(e.atkT >= e.atkCd){eBite(e);e.atkT=0;}
+      } else {
+        // Flanking: circle/stalk at range > 6, approach with angle offset
+        var surroundAng = getSurroundAngle(e);
+        if (pd > 6) {
+          // Approach but at an angle — orbit-stalk
+          var toPlayerAng = Math.atan2(player.pos.x - e.pos.x, player.pos.z - e.pos.z);
+          var orbitAng = toPlayerAng + surroundAng * 0.4 + Math.sin(e.mesh.userData.wt*0.3)*0.5;
+          var targetX = player.pos.x + Math.sin(orbitAng + Math.PI) * 5;
+          var targetZ = player.pos.z + Math.cos(orbitAng + Math.PI) * 5;
+          var tdx = targetX - e.pos.x;
+          var tdz = targetZ - e.pos.z;
+          var tlen = Math.sqrt(tdx*tdx+tdz*tdz)||1;
+          eMove(e,(tdx/tlen)*spd*0.8,(tdz/tlen)*spd*0.8,dt);
+        } else {
+          // Close in with angular offset
+          var toAng = Math.atan2(player.pos.x - e.pos.x, player.pos.z - e.pos.z);
+          var approachAng = toAng + surroundAng * 0.25;
+          eMove(e, Math.sin(approachAng)*spd, Math.cos(approachAng)*spd, dt);
+        }
+      }
+    }
+  }
+  else if (e.state === 'flee') {
+    e.fleeTimer -= dt;
+    if(e.fleeTimer <= 0 && e.hp > e.maxHp*0.38){e.state='wander';}
+    else{
+      var fx=e.pos.x-player.pos.x,fz=e.pos.z-player.pos.z,fl=Math.sqrt(fx*fx+fz*fz)||1;
+      eMove(e,(fx/fl)*spd,(fz/fl)*spd,dt);
+    }
+  }
+}
+
+function alertPackNearby(alerter, immediateOrDelay) {
+  for (var i=0; i<G.enemies.length; i++) {
+    var other = G.enemies[i];
+    if (other === alerter || other.dead || other.tk !== 'stray') continue;
+    var dx=other.pos.x-alerter.pos.x, dz=other.pos.z-alerter.pos.z;
+    if (dx*dx+dz*dz < 16*16) {
+      var delay = 0.5 + Math.random()*0.5;
+      (function(o, d){
+        setTimeout(function(){
+          if(!o.dead && o.state !== 'attack' && o.state !== 'carry') {
+            o.state = 'attack';
+          }
+        }, d*1000);
+      })(other, delay);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+// SWIFT AI
+// ─────────────────────────────────────────────
+function updateSwift(e, dt, pd, alphaBoost) {
+  var spd = e.td.spd * alphaBoost;
+  if (e.swiftDashCd > 0) e.swiftDashCd -= dt;
+  if (e.fleeTimer > 0) e.fleeTimer -= dt;
+
+  // Growl flee overrides
+  if (e.state === 'flee' && e.fleeTimer > 0) {
+    var fx=e.pos.x-player.pos.x,fz=e.pos.z-player.pos.z,fl=Math.sqrt(fx*fx+fz*fz)||1;
+    eMove(e,(fx/fl)*spd,(fz/fl)*spd,dt);
+    return;
+  } else if (e.state === 'flee' && e.fleeTimer <= 0) {
+    e.state = 'wander';
+  }
+
+  if (e.state === 'wander') {
+    // Priority: seek unattended bone within 18 units if player not adjacent
+    var nb = nearestFreeBone2(e.pos, 18);
+    var playerClose = pd < 5;
+    if (nb && !playerClose) {
+      e.targetBone = nb; e.state = 'seek';
+    } else if (pd < e.detectR && e.swiftDashCd <= 0) {
+      e.state = 'attack';
+      e.swiftRetreating = false;
+    } else {
+      e.wanderT-=dt;
+      if(e.wanderT<=0){e.wanderAngle+=rnd(-1.8,1.8);e.wanderT=rnd(1,2.5);}
+      eMove(e,Math.cos(e.wanderAngle)*spd*0.5,Math.sin(e.wanderAngle)*spd*0.5,dt);
+    }
+  }
+  else if (e.state === 'seek') {
+    if(!e.targetBone||e.targetBone.owner!==null){e.targetBone=null;e.state='wander';}
+    else {
+      var bp=e.targetBone.pos;
+      var bdx=bp.x-e.pos.x,bdz=bp.z-e.pos.z,bd=Math.sqrt(bdx*bdx+bdz*bdz);
+      if(bd<1.3){eGrab(e,e.targetBone);e.state='carry';}
+      else eMove(e,(bdx/bd)*spd,(bdz/bd)*spd,dt);
+    }
+  }
+  else if (e.state === 'carry') {
+    if(!e.holdingBone){e.state='wander';}
+    else{
+      var ddx=G.eDen.x-e.pos.x,ddz=G.eDen.z-e.pos.z,dd2=Math.sqrt(ddx*ddx+ddz*ddz);
+      if(dd2<3.2){eScore(e);e.state='wander';}
+      else eMove(e,(ddx/dd2)*spd*0.85,(ddz/dd2)*spd*0.85,dt);
+    }
+  }
+  else if (e.state === 'attack') {
+    if (e.holdingBone) { e.state='carry'; return; }
+    if (e.swiftRetreating) {
+      // Retreat 10 units away from player
+      if (!e.swiftRetreatTarget) {
+        var retreatAng = Math.atan2(e.pos.z - player.pos.z, e.pos.x - player.pos.x) + rnd(-0.5,0.5);
+        e.swiftRetreatTarget = {
+          x: e.pos.x + Math.cos(retreatAng)*10,
+          z: e.pos.z + Math.sin(retreatAng)*10
+        };
+      }
+      var rtx = e.swiftRetreatTarget.x - e.pos.x;
+      var rtz = e.swiftRetreatTarget.z - e.pos.z;
+      var rtd = Math.sqrt(rtx*rtx+rtz*rtz);
+      if (rtd < 1.5 || pd > 12) {
+        e.swiftRetreating = false;
+        e.swiftRetreatTarget = null;
+        e.swiftDashCd = 1.5;
+        e.state = 'wander';
+      } else {
+        eMove(e, (rtx/rtd)*spd*1.4, (rtz/rtd)*spd*1.4, dt);
+      }
+    } else {
+      // Dash in fast 1.5x speed
+      if (pd < e.biteR) {
+        if(e.atkT >= e.atkCd){
+          eBite(e); e.atkT=0;
+          e.swiftRetreating = true;
+          e.swiftRetreatTarget = null;
+        }
+      } else {
+        var adx=player.pos.x-e.pos.x,adz=player.pos.z-e.pos.z,al=Math.sqrt(adx*adx+adz*adz)||1;
+        eMove(e,(adx/al)*spd*1.5,(adz/al)*spd*1.5,dt);
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+// BULLDOG AI
+// ─────────────────────────────────────────────
+function updateBulldog(e, dt, pd, alphaBoost) {
+  var spd = e.td.spd * alphaBoost;
+
+  if (e.bulldogRecovery > 0) {
+    e.bulldogRecovery -= dt;
+    // Stumble in place
+    e.mesh.userData.wt += dt * 3;
+    return;
+  }
+
+  if (e.bulldogCharging) {
+    e.bulldogChargeT -= dt;
+    var cd = e.bulldogChargeDir;
+    eMove(e, cd.x * e.td.spd * 2.5, cd.z * e.td.spd * 2.5, dt);
+    // Check if hit player
+    if (pd < e.biteR + 0.5) {
+      // Charge connects
+      if(G.iframes <= 0) {
+        if(player.holdingBone){pDropBone();showMsg('BULLDOZED! Bone knocked loose!',2.5);}
+        var dmg = e.td.dmg * 1.5;
+        player.hp = Math.max(0, player.hp - dmg);
+        G.iframes = 0.7;
+        startScreenShake(0.6, 0.5);
+        // Heavy knockback on player
+        applyKnockback(player.pos, e.pos.x, e.pos.z, -3.0); // push away from bulldog
+        mkParticles(player.pos.x,player.pos.y+0.6,player.pos.z,0xFF2200,12);
+        showMsg('BULLDOG CHARGE!', 2.0);
+        if (player.hp <= 0) triggerDeath();
+      }
+      e.bulldogCharging = false;
+      e.bulldogChargeT = 0;
+      e.atkT = 0;
+    } else if (e.bulldogChargeT <= 0) {
+      // Charge missed — recovery stumble
+      e.bulldogCharging = false;
+      e.bulldogRecovery = 1.2;
+    }
+    return;
+  }
+
+  if (e.bulldogWindup) {
+    e.bulldogWindupT -= dt;
+    // Stand in place during windup
+    if (e.bulldogWindupT <= 0) {
+      e.bulldogWindup = false;
+      e.bulldogCharging = true;
+      e.bulldogChargeT = 0.5; // time the charge lasts
+      // Charge toward where player WAS
+      var lp = e.bulldogLastPlayerPos || player.pos;
+      var cdx = lp.x - e.pos.x;
+      var cdz = lp.z - e.pos.z;
+      var cl = Math.sqrt(cdx*cdx+cdz*cdz)||1;
+      e.bulldogChargeDir = {x: cdx/cl, z: cdz/cl};
+    }
+    return;
+  }
+
+  if (e.state === 'wander') {
+    if (!e.holdingBone && pd < e.detectR && Math.random() < e.td.agg*dt*2) {
+      e.state = 'attack';
+    } else {
+      var nb = nearestFreeBone2(e.pos, 22);
+      if (nb) { e.targetBone=nb; e.state='seek'; }
+      else {
+        e.wanderT-=dt;
+        if(e.wanderT<=0){e.wanderAngle+=rnd(-1.8,1.8);e.wanderT=rnd(1,2.5);}
+        eMove(e,Math.cos(e.wanderAngle)*spd*0.5,Math.sin(e.wanderAngle)*spd*0.5,dt);
+      }
+    }
+  }
+  else if (e.state === 'seek') {
+    if(!e.targetBone||e.targetBone.owner!==null){e.targetBone=null;e.state='wander';}
+    else if(!e.holdingBone&&pd<3.5){e.state='attack';}
+    else {
+      var bp=e.targetBone.pos;
+      var bdx=bp.x-e.pos.x,bdz=bp.z-e.pos.z,bd=Math.sqrt(bdx*bdx+bdz*bdz);
+      if(bd<1.3){eGrab(e,e.targetBone);e.state='carry';}
+      else eMove(e,(bdx/bd)*spd,(bdz/bd)*spd,dt);
+    }
+  }
+  else if (e.state === 'carry') {
+    if(!e.holdingBone){e.state='wander';}
+    else{
+      var ddx=G.eDen.x-e.pos.x,ddz=G.eDen.z-e.pos.z,dd2=Math.sqrt(ddx*ddx+ddz*ddz);
+      if(dd2<3.2){eScore(e);e.state='wander';}
+      else eMove(e,(ddx/dd2)*spd*0.85,(ddz/dd2)*spd*0.85,dt);
+    }
+  }
+  else if (e.state === 'attack') {
+    if(e.holdingBone){e.state='carry';}
+    else if(pd>e.detectR*1.6){e.state='wander';}
+    else if(e.hp<e.maxHp*0.18){e.state='flee'; e.fleeTimer=3.0;}
+    else {
+      if (pd < 4) {
+        // Too close — normal bite
+        if(e.atkT >= e.atkCd){eBite(e);e.atkT=0;}
+      } else if (pd >= 8 && pd <= 16 && e.atkT >= e.atkCd * 1.5) {
+        // Wind up for charge
+        e.bulldogWindup = true;
+        e.bulldogWindupT = 0.6;
+        e.bulldogLastPlayerPos = player.pos.clone();
+        e.atkT = 0;
+      } else {
+        // Approach slowly
+        var adx=player.pos.x-e.pos.x,adz=player.pos.z-e.pos.z,al=Math.sqrt(adx*adx+adz*adz)||1;
+        eMove(e,(adx/al)*spd*0.7,(adz/al)*spd*0.7,dt);
+      }
+    }
+  }
+  else if (e.state === 'flee') {
+    e.fleeTimer -= dt;
+    if(e.fleeTimer <= 0 && e.hp > e.maxHp*0.38){e.state='wander';}
+    else{var fx=e.pos.x-player.pos.x,fz=e.pos.z-player.pos.z,fl=Math.sqrt(fx*fx+fz*fz)||1;eMove(e,(fx/fl)*spd,(fz/fl)*spd,dt);}
+  }
+}
+
+// ─────────────────────────────────────────────
+// PITBULL AI
+// ─────────────────────────────────────────────
+function updatePitbull(e, dt, pd, alphaBoost) {
+  // Check rage mode
+  if (!e.rageMode && e.hp < e.maxHp * 0.4) {
+    e.rageMode = true;
+    showMsg('PITBULL RAGES!', 2.0);
+    // Set base emissive to dark red
+    e.mesh.traverse(function(child) {
+      if (child.isMesh && child.material && child.material.emissive !== undefined) {
+        child.material.emissive.setHex(0x441100);
+      }
+    });
+  }
+
+  // Rage flash every 0.5s
+  if (e.rageMode && e.mesh.userData.hitFlashT <= 0) {
+    e.rageFlashT -= dt;
+    if (e.rageFlashT <= 0) {
+      e.rageFlashT = 0.5;
+      e.mesh.traverse(function(child) {
+        if (child.isMesh && child.material && child.material.emissive !== undefined) {
+          var cur = child.material.emissive.getHex();
+          child.material.emissive.setHex(cur === 0x441100 ? 0x882200 : 0x441100);
+        }
+      });
+    }
+  }
+
+  var speedMult = e.rageMode ? 1.6 : 1.0;
+  var spd = e.td.spd * alphaBoost * speedMult;
+  var dmgMult = e.rageMode ? 1.4 : 1.0;
+
+  if (e.state === 'wander') {
+    // Pitbull always alert, pack alerts on spotting player
+    if (pd < e.detectR) {
+      e.state = 'attack';
+      // Alert all pitbulls and strays nearby
+      alertMixedPack(e, 12);
+    } else {
+      e.wanderT-=dt;
+      if(e.wanderT<=0){e.wanderAngle+=rnd(-1.8,1.8);e.wanderT=rnd(1,2.5);}
+      eMove(e,Math.cos(e.wanderAngle)*spd*0.5,Math.sin(e.wanderAngle)*spd*0.5,dt);
+    }
+  }
+  else if (e.state === 'attack') {
+    // Relentless — never flees
+    if(e.holdingBone){e.state='carry'; return;}
+    if (pd < e.biteR) {
+      if(e.atkT >= e.atkCd) {
+        // Pitbull bite with optional dmg multiplier
+        if(G.iframes <= 0) {
+          if(player.holdingBone){pDropBone();showMsg('They knocked your bone loose!',2.5);}
+          player.hp = Math.max(0, player.hp - e.td.dmg * dmgMult);
+          G.iframes = 0.5;
+          G.comboCount = 0; // reset combo on getting hit
+          startScreenShake(0.35, 0.3);
+          applyKnockback(player.pos, e.pos.x, e.pos.z, -1.5);
+          mkParticles(player.pos.x,player.pos.y+0.6,player.pos.z,0xFF2200,9);
+          if(player.hp<=0) triggerDeath();
+        }
+        e.atkT=0;
+      }
+    } else {
+      var adx=player.pos.x-e.pos.x,adz=player.pos.z-e.pos.z,al=Math.sqrt(adx*adx+adz*adz)||1;
+      var surroundAng = getSurroundAngle(e) * 0.2;
+      eMove(e,(adx/al + Math.cos(surroundAng)*0.3)*spd,(adz/al + Math.sin(surroundAng)*0.3)*spd,dt);
+    }
+  }
+  else if (e.state === 'seek') {
+    if(!e.targetBone||e.targetBone.owner!==null){e.targetBone=null;e.state='wander';}
+    else {
+      var bp=e.targetBone.pos;
+      var bdx=bp.x-e.pos.x,bdz=bp.z-e.pos.z,bd=Math.sqrt(bdx*bdx+bdz*bdz);
+      if(bd<1.3){eGrab(e,e.targetBone);e.state='carry';}
+      else eMove(e,(bdx/bd)*spd,(bdz/bd)*spd,dt);
+    }
+  }
+  else if (e.state === 'carry') {
+    if(!e.holdingBone){e.state='attack';}
+    else{
+      var ddx=G.eDen.x-e.pos.x,ddz=G.eDen.z-e.pos.z,dd2=Math.sqrt(ddx*ddx+ddz*ddz);
+      if(dd2<3.2){eScore(e);e.state='attack';}
+      else eMove(e,(ddx/dd2)*spd*0.85,(ddz/dd2)*spd*0.85,dt);
+    }
+  }
+  else if (e.state === 'stun') {
+    e.stunT -= dt;
+    if (e.stunT <= 0) e.state = 'attack';
+  }
+  else {
+    // Any other state — go attack
+    e.state = 'attack';
+  }
+}
+
+function alertMixedPack(alerter, range) {
+  for (var i=0; i<G.enemies.length; i++) {
+    var other = G.enemies[i];
+    if (other === alerter || other.dead) continue;
+    if (other.tk !== 'pitbull' && other.tk !== 'stray') continue;
+    var dx=other.pos.x-alerter.pos.x, dz=other.pos.z-alerter.pos.z;
+    if (dx*dx+dz*dz < range*range) {
+      var delay = 0.3 + Math.random()*0.5;
+      (function(o, d){
+        setTimeout(function(){
+          if(!o.dead && o.state !== 'attack' && o.state !== 'carry') {
+            o.state = 'attack';
+          }
+        }, d*1000);
+      })(other, delay);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+// ALPHA AI
+// ─────────────────────────────────────────────
+function updateAlpha(e, dt, pd) {
+  var spd = e.td.spd;
+  G.alphaBarkT -= dt;
+
+  // Count active enemies
+  var activeCount = 0;
+  for (var i=0; i<G.enemies.length; i++) {
+    if (!G.enemies[i].dead && G.enemies[i] !== e) activeCount++;
+  }
+  var packMostlyDead = activeCount < 2;
+  var lowHp = e.hp < e.maxHp * 0.6;
+  var shouldEngage = packMostlyDead || lowHp;
+
+  // Bark every 8s
+  if (G.alphaBarkT <= 0) {
+    G.alphaBarkT = 8.0;
+    alphaBark(e);
+  }
+
+  if (e.state === 'wander') {
+    if (pd < e.detectR) e.state = 'attack';
+    else {
+      e.wanderT-=dt;
+      if(e.wanderT<=0){e.wanderAngle+=rnd(-1.8,1.8);e.wanderT=rnd(1,2.5);}
+      eMove(e,Math.cos(e.wanderAngle)*spd*0.5,Math.sin(e.wanderAngle)*spd*0.5,dt);
+    }
+    return;
+  }
+
+  if (e.state === 'stun') {
+    e.stunT -= dt; if(e.stunT<=0) e.state='attack';
+    return;
+  }
+
+  if (!shouldEngage) {
+    // Hang back at range 10-14 from player
+    if (pd < 10) {
+      // Back away
+      var fx=e.pos.x-player.pos.x,fz=e.pos.z-player.pos.z,fl=Math.sqrt(fx*fx+fz*fz)||1;
+      eMove(e,(fx/fl)*spd,(fz/fl)*spd,dt);
+    } else if (pd > 14) {
+      // Move closer
+      var adx=player.pos.x-e.pos.x,adz=player.pos.z-e.pos.z,al=Math.sqrt(adx*adx+adz*adz)||1;
+      eMove(e,(adx/al)*spd*0.6,(adz/al)*spd*0.6,dt);
+    }
+    // Slam if player stumbles within 3 units
+    if (pd < 3 && e.atkT >= e.atkCd) {
+      alphaSlam(e);
+      e.atkT = 0;
+    }
+  } else {
+    // Engage directly
+    if (pd < 3) {
+      if(e.atkT >= e.atkCd) {
+        alphaSlam(e);
+        e.atkT = 0;
+      }
+    } else {
+      var adx2=player.pos.x-e.pos.x,adz2=player.pos.z-e.pos.z,al2=Math.sqrt(adx2*adx2+adz2*adz2)||1;
+      eMove(e,(adx2/al2)*spd,(adz2/al2)*spd,dt);
+    }
+  }
+}
+
+function alphaBark(e) {
+  mkParticles(e.pos.x, e.pos.y+1.2, e.pos.z, 0xFF6600, 22);
+  showMsg('ALPHA BARKS!', 2.5);
+  for (var i=0; i<G.enemies.length; i++) {
+    var other = G.enemies[i];
+    if (other.dead || other === e) continue;
+    var dx=other.pos.x-e.pos.x, dz=other.pos.z-e.pos.z;
+    if (dx*dx+dz*dz < 25*25) {
+      other.state = 'attack';
+    }
+  }
+}
+
+function alphaSlam(e) {
+  // AOE that hits even if player holds bone
+  mkParticles(e.pos.x,e.pos.y+0.5,e.pos.z,0xFF0000,16);
+  if(G.iframes <= 0 || player.holdingBone) {
+    var dmg = e.td.dmg * 1.5;
+    if(player.holdingBone){pDropBone();showMsg('ALPHA SLAM! Bone knocked away!',2.5);}
+    else showMsg('ALPHA SLAM!',1.8);
+    player.hp = Math.max(0, player.hp - dmg);
+    G.iframes = 0.65;
+    G.comboCount = 0;
+    startScreenShake(0.55, 0.45);
+    applyKnockback(player.pos, e.pos.x, e.pos.z, -2.5);
+    mkParticles(player.pos.x,player.pos.y+0.6,player.pos.z,0xFF2200,12);
+    if(player.hp<=0) triggerDeath();
+  }
+}
+
+// ─────────────────────────────────────────────
+// GENERIC ENEMY FALLBACK
+// ─────────────────────────────────────────────
+function updateGeneric(e, dt, pd, alphaBoost) {
+  var spd = e.td.spd * alphaBoost;
+
+  if(e.state==='wander'){
+    if(!e.holdingBone&&pd<e.detectR&&Math.random()<e.td.agg*dt*2){e.state='attack';}
+    else{
+      var nb=nearestFreeBone2(e.pos,22);
+      if(nb){e.targetBone=nb;e.state='seek';}
+      else{
+        e.wanderT-=dt;
+        if(e.wanderT<=0){e.wanderAngle+=rnd(-1.8,1.8);e.wanderT=rnd(1,2.5);}
+        eMove(e,Math.cos(e.wanderAngle)*spd*0.5,Math.sin(e.wanderAngle)*spd*0.5,dt);
+      }
+    }
+  }
+  else if(e.state==='seek'){
+    if(!e.targetBone||e.targetBone.owner!==null){e.targetBone=null;e.state='wander';}
+    else if(!e.holdingBone&&pd<3.5&&e.td.agg>0.55){e.state='attack';}
+    else{
+      var bp=e.targetBone.pos;
+      var bdx=bp.x-e.pos.x,bdz=bp.z-e.pos.z,bd=Math.sqrt(bdx*bdx+bdz*bdz);
+      if(bd<1.3){eGrab(e,e.targetBone);e.state='carry';}
+      else eMove(e,(bdx/bd)*spd,(bdz/bd)*spd,dt);
+    }
+  }
+  else if(e.state==='carry'){
+    if(!e.holdingBone){e.state='wander';}
+    else{
+      var ddx=G.eDen.x-e.pos.x,ddz=G.eDen.z-e.pos.z,dd2=Math.sqrt(ddx*ddx+ddz*ddz);
+      if(dd2<3.2){eScore(e);e.state='wander';}
+      else eMove(e,(ddx/dd2)*spd*0.85,(ddz/dd2)*spd*0.85,dt);
+    }
+  }
+  else if(e.state==='attack'){
+    if(e.holdingBone){e.state='carry';}
+    else if(pd>e.detectR*1.6){e.state='wander';}
+    else if(e.hp<e.maxHp*0.18){e.state='flee'; e.fleeTimer=4.0;}
+    else{
+      if(pd<e.biteR){if(e.atkT>=e.atkCd){eBite(e);e.atkT=0;}}
+      else{
+        var adx=player.pos.x-e.pos.x,adz=player.pos.z-e.pos.z,al=Math.sqrt(adx*adx+adz*adz)||1;
+        eMove(e,(adx/al)*spd,(adz/al)*spd,dt);
+      }
+    }
+  }
+  else if(e.state==='flee'){
+    e.fleeTimer -= dt;
+    if(e.fleeTimer<=0&&e.hp>e.maxHp*0.38){e.state='wander';}
+    else{var fx=e.pos.x-player.pos.x,fz=e.pos.z-player.pos.z,fl=Math.sqrt(fx*fx+fz*fz)||1;eMove(e,(fx/fl)*spd,(fz/fl)*spd,dt);}
+  }
+}
+
 function eMove(e, vx, vz, dt) {
   var nx=e.pos.x+vx*dt, nz=e.pos.z+vz*dt;
   nx=Math.max(-W+2,Math.min(W-2,nx));
@@ -817,7 +1666,6 @@ function eMove(e, vx, vz, dt) {
     e.pos.x=nx; e.pos.z=nz;
     e.pos.y=th(nx,nz); // terrain follow
     if(vx!==0||vz!==0){
-      // Facing direction: enemy moves in direction (vx, vz), facing = atan2(vx, vz)
       var tf=Math.atan2(vx,vz);
       var da=tf-e.facing; while(da>Math.PI)da-=Math.PI*2; while(da<-Math.PI)da+=Math.PI*2;
       e.facing+=da*Math.min(1,10*dt);
@@ -857,6 +1705,10 @@ function eBite(e) {
   if(player.holdingBone){pDropBone();showMsg('They knocked your bone loose!',2.5);}
   player.hp=Math.max(0,player.hp-e.td.dmg);
   G.iframes=0.5;
+  G.comboCount=0; // Reset combo on getting hit
+  startScreenShake(0.35, 0.3);
+  // Knockback player 1.5 units away from enemy
+  applyKnockback(player.pos, e.pos.x, e.pos.z, -1.5);
   mkParticles(player.pos.x,player.pos.y+0.6,player.pos.z,0xFF2200,9);
   if(player.hp<=0)triggerDeath();
 }
@@ -937,6 +1789,36 @@ function updateHUD() {
 
   if(G.msgTimer>0)G.msgTimer-=1/60;
   else document.getElementById('msg').textContent='';
+
+  // Charge bar
+  var chargeEl = document.getElementById('charge-bar');
+  if (G.chargeHeld && G.chargeT > 0) {
+    var pct = G.chargeT / G.chargeMax;
+    var bars = Math.floor(pct * 12);
+    var barStr = '>CHARGING';
+    for (var ci=0; ci<bars; ci++) barStr += '!';
+    barStr += '<';
+    chargeEl.textContent = barStr;
+    chargeEl.style.color = pct >= 0.9 ? '#ff4400' : '#ffaa00';
+  } else {
+    chargeEl.textContent = '';
+  }
+
+  // Combo display
+  var comboEl = document.getElementById('combo-disp');
+  if (comboTxtTimer > 0) {
+    comboTxtTimer -= 1/60;
+    if (comboTxtTimer <= 0) {
+      comboEl.textContent = '';
+    }
+  }
+
+  // Dodge text
+  var dodgeEl = document.getElementById('dodge-txt');
+  if (dodgeTxtTimer > 0) {
+    dodgeTxtTimer -= 1/60;
+    if (dodgeTxtTimer <= 0) dodgeEl.textContent = '';
+  }
 }
 
 function drawMinimap() {
@@ -1022,11 +1904,21 @@ function loop(t) {
 document.addEventListener('keydown',function(e){
   KB[e.code]=true;
   if(!G.started||G.dead)return;
-  if(e.code==='KeyE')tryPickup();
-  if(e.code==='Space'){e.preventDefault();tryBite();}
+  if(e.code==='KeyE') tryPickup();
+  if(e.code==='Space'){e.preventDefault(); tryDodge();}
+  if(e.code==='KeyQ') tryGrowl();
 });
 document.addEventListener('keyup',function(e){KB[e.code]=false;});
-document.addEventListener('mousedown',function(e){if(!G.started||G.dead)return;if(e.button===0)tryBite();});
+
+document.addEventListener('mousedown',function(e){
+  if(!G.started||G.dead)return;
+  if(e.button===0) startCharge();
+});
+document.addEventListener('mouseup',function(e){
+  if(!G.started||G.dead)return;
+  if(e.button===0) releaseCharge();
+});
+
 document.addEventListener('mousemove',function(e){
   if(!G.started||G.dead)return;
   if(document.pointerLockElement===canvas)mdx+=e.movementX;
@@ -1050,6 +1942,7 @@ function startGame() {
   camSmooth.set(0, CAM_H, -CAM_DIST);
   spawnEnemy('stray'); spawnEnemy('stray');
   G.started=true;
+  G.alphaBarkT = 8.0;
   canvas.requestPointerLock();
   showMsg('Find bones! Bring them to your yellow den!',4);
 }
