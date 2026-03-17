@@ -109,7 +109,7 @@ body { background: #000; overflow: hidden; font-family: 'Courier New', monospace
     <button class="cbtn"     id="btn-husky"     onclick="selectClass('husky')"     >HUSKY<small>Tough Carrier</small></button>
     <button class="cbtn"     id="btn-pitbull"   onclick="selectClass('pitbull')"   >PITBULL<small>Brawler</small></button>
   </div>
-  <button class="cbtn" id="startBtn">START GAME</button>
+  <button class="cbtn" id="startBtn" onclick="startGame()">START GAME</button>
   <div class="sub">
     WASD: Move &nbsp;&bull;&nbsp; Mouse: Look &nbsp;&bull;&nbsp; E: Pick Up / Drop Bone<br>
     Left Click: Bite &nbsp;&bull;&nbsp; Shift: Sprint &nbsp;&bull;&nbsp; Return bones to your YELLOW den<br>
@@ -984,7 +984,7 @@ window.addEventListener('resize',resize); resize();
 // ──────────────────────────────────────────────
 (function buildBackdrop(){
   const g=new THREE.PlaneGeometry(W*2,W*2);
-  scene.add(Object.assign(new THREE.Mesh(g,lmat(0x4A7C3E)),{rotation:{x:-Math.PI/2,y:0,z:0}}));
+  const ground=new THREE.Mesh(g,lmat(0x4A7C3E)); ground.rotation.x=-Math.PI/2; scene.add(ground);
   scene.add(new THREE.AmbientLight(0x999999));
   const sun=new THREE.DirectionalLight(0xFFFFCC,0.75);
   sun.position.set(12,24,10); scene.add(sun);
@@ -1005,16 +1005,15 @@ function selectClass(c){
   });
   G.selectedClass=c;
 }
-document.getElementById('startBtn').addEventListener('click',()=>{
+function startGame(){
   document.getElementById('startScreen').style.display='none';
   G.started=true;
   initPlayer();
   generateWorld();
-  // Initial enemies
   spawnEnemy('stray'); spawnEnemy('stray');
   canvas.requestPointerLock();
   msg('Find bones! Bring them to your YELLOW den!',4);
-});
+}
 </script>
 </body>
 </html>
