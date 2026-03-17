@@ -4,72 +4,68 @@
 <meta charset="UTF-8">
 <title>BONE RUSH</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
-#gameCanvas {
-  display: block;
-  width: 100vw; height: 100vh;
-  image-rendering: pixelated;
-}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
+#gameCanvas { display:block; width:100vw; height:100vh; image-rendering:pixelated; }
+
 #hud {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none; user-select: none;
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  pointer-events:none; user-select:none;
 }
-.hud-panel { position: absolute; }
-#topLeft { top: 14px; left: 14px; }
-#topRight { top: 14px; right: 14px; text-align: right; }
-#botCenter { bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; }
-.bar-label { font-size: 11px; color: #999; letter-spacing: 2px; text-transform: uppercase; }
-.bar { width: 160px; height: 10px; background: #222; border: 1px solid #444; margin-top: 2px; margin-bottom: 6px; }
-.bar-fill { height: 100%; }
-#hpFill { background: #cc2222; }
-#spFill { background: #22cc44; }
-#dogLabel { font-size: 15px; color: #6af; letter-spacing: 1px; margin-bottom: 6px; }
-#scoreEl { font-size: 22px; color: #ffe000; text-shadow: 2px 2px #000; margin-bottom: 4px; }
-#waveEl { font-size: 13px; color: #f88; }
-#botMsg { font-size: 16px; color: #fff; text-shadow: 2px 2px #000; margin-bottom: 6px; min-height: 22px; }
-#botHint { font-size: 12px; color: #888; letter-spacing: 1px; }
-#crosshair {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-  width: 18px; height: 18px; opacity: 0.75;
+.hp { position:absolute; top:16px; left:16px; }
+.lbl { font-size:11px; color:#aaa; letter-spacing:2px; text-transform:uppercase; }
+.bar { width:150px; height:10px; background:#222; border:1px solid #444; margin:3px 0 7px; }
+.bar-fill { height:100%; transition:width 0.1s; }
+#hpFill { background:#cc2222; }
+#spFill { background:#22cc55; }
+#dogName { font-size:14px; color:#6af; letter-spacing:1px; margin-bottom:6px; }
+
+.score-panel { position:absolute; top:16px; right:16px; text-align:right; }
+#scoreEl { font-size:22px; color:#ffe000; text-shadow:2px 2px #000; }
+#waveEl { font-size:13px; color:#f88; margin-top:4px; }
+
+#msgEl {
+  position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
+  font-size:17px; color:#fff; text-shadow:2px 2px #000; text-align:center;
+  min-height:24px; letter-spacing:1px;
 }
-#crosshair::before, #crosshair::after {
-  content: ''; position: absolute; background: #fff;
+#hintEl {
+  position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+  font-size:12px; color:#666; letter-spacing:1px; text-align:center;
 }
-#crosshair::before { width: 2px; height: 18px; left: 8px; top: 0; }
-#crosshair::after { width: 18px; height: 2px; top: 8px; left: 0; }
+#boneEl { font-size:14px; color:#ffe000; margin-top:4px; min-height:20px; }
+
 #minimap {
-  position: absolute; bottom: 14px; right: 14px;
-  border: 2px solid #444; background: rgba(0,0,0,0.6);
+  position:absolute; bottom:16px; right:16px;
+  border:2px solid #444;
 }
-/* Screens */
+
+/* screens */
 .screen {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  z-index: 100; pointer-events: all;
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.88);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  color:#fff; z-index:10; pointer-events:auto;
 }
-#startScreen { background: rgba(0,0,0,0.88); color: #fff; }
-#deathScreen { background: rgba(70,0,0,0.9); color: #fff; display: none; }
-.screen h1 { font-size: 44px; margin-bottom: 6px; }
-.screen p { font-size: 13px; color: #888; margin: 3px 0; }
-.screen .sub { font-size: 12px; color: #666; margin-top: 14px; text-align: center; line-height: 1.8; }
-.class-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 16px 0; max-width: 560px; }
-.cbtn {
-  padding: 10px 18px; background: #1a1a1a; border: 2px solid #444;
-  color: #ccc; font-family: 'Courier New', monospace; font-size: 12px;
-  cursor: pointer; text-transform: uppercase; letter-spacing: 1px; text-align: center;
-  min-width: 100px;
+.screen h1 { font-size:44px; margin-bottom:6px; }
+.note { font-size:13px; color:#777; margin:3px 0; }
+.class-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:14px 0; max-width:560px; }
+.cb {
+  padding:10px 18px; min-width:100px; text-align:center;
+  background:#111; border:2px solid #444; color:#aaa;
+  font-family:'Courier New',monospace; font-size:12px;
+  cursor:pointer; text-transform:uppercase; letter-spacing:1px;
 }
-.cbtn:hover { border-color: #ffe000; color: #ffe000; background: #222; }
-.cbtn.sel { border-color: #e03; color: #e03; background: #200; }
-.cbtn small { display: block; color: #666; font-size: 10px; margin-top: 3px; }
-.cbtn.sel small { color: #844; }
+.cb:hover { border-color:#ffe000; color:#ffe000; }
+.cb.on { border-color:#e03; color:#e03; background:#200; }
+.cb small { display:block; font-size:10px; color:#555; margin-top:3px; }
+.cb.on small { color:#844; }
 #startBtn {
-  font-size: 18px; padding: 14px 44px; border-color: #ffe000; color: #ffe000;
-  background: #111; margin-top: 6px;
+  font-size:18px; padding:14px 48px;
+  border-color:#ffe000; color:#ffe000; background:#111; margin-top:8px;
 }
-#startBtn:hover { background: #221; }
-#deathScore { font-size: 18px; color: #faa; margin: 12px 0; }
+.controls-note { font-size:12px; color:#555; text-align:center; margin-top:14px; line-height:2; }
+#deathScore { font-size:18px; color:#faa; margin:14px 0; }
 </style>
 </head>
 <body>
@@ -77,943 +73,1045 @@ body { background: #000; overflow: hidden; font-family: 'Courier New', monospace
 <canvas id="gameCanvas"></canvas>
 
 <div id="hud">
-  <div class="hud-panel" id="topLeft">
-    <div id="dogLabel">MUTT</div>
-    <div class="bar-label">HEALTH</div>
-    <div class="bar"><div class="bar-fill" id="hpFill"></div></div>
-    <div class="bar-label">STAMINA</div>
-    <div class="bar"><div class="bar-fill" id="spFill"></div></div>
+  <div class="hp">
+    <div id="dogName">MUTT</div>
+    <div class="lbl">HEALTH</div>
+    <div class="bar"><div class="bar-fill" id="hpFill" style="width:100%"></div></div>
+    <div class="lbl">STAMINA</div>
+    <div class="bar"><div class="bar-fill" id="spFill" style="width:100%"></div></div>
   </div>
-  <div class="hud-panel" id="topRight">
+  <div class="score-panel">
     <div id="scoreEl">BONES: 0</div>
     <div id="waveEl">WAVE 1</div>
   </div>
-  <div class="hud-panel" id="botCenter">
-    <div id="botMsg"></div>
-    <div id="botHint">[E] GRAB BONE &nbsp;|&nbsp; [CLICK] BITE &nbsp;|&nbsp; [SHIFT] SPRINT</div>
+  <div id="msgEl"></div>
+  <div id="hintEl">
+    <div id="boneEl"></div>
+    WASD: Move &nbsp;|&nbsp; MOUSE: Rotate Cam &nbsp;|&nbsp; E: Grab/Drop &nbsp;|&nbsp; CLICK: Bite &nbsp;|&nbsp; SHIFT: Sprint
   </div>
-  <div id="crosshair"></div>
   <canvas id="minimap" width="130" height="130"></canvas>
 </div>
 
 <!-- START SCREEN -->
 <div class="screen" id="startScreen">
   <h1 style="color:#ffe000;text-shadow:3px 3px #800">&#x1F9B4; BONE RUSH &#x1F9B4;</h1>
-  <p>Collect bones. Bring them back to your glowing den.</p>
-  <p>Drop your bone to fight. Enemy dogs carry bones to THEIR den.</p>
-  <div style="margin-top:18px;font-size:15px;color:#ffe000;">CHOOSE YOUR DOG</div>
-  <div class="class-grid" id="classGrid">
-    <button class="cbtn sel" id="btn-mutt"      onclick="selectClass('mutt')"      >MUTT<small>Balanced</small></button>
-    <button class="cbtn"     id="btn-bulldog"   onclick="selectClass('bulldog')"   >BULLDOG<small>Tank &bull; Slow</small></button>
-    <button class="cbtn"     id="btn-greyhound" onclick="selectClass('greyhound')" >GREYHOUND<small>Speed &bull; Fragile</small></button>
-    <button class="cbtn"     id="btn-husky"     onclick="selectClass('husky')"     >HUSKY<small>Tough Carrier</small></button>
-    <button class="cbtn"     id="btn-pitbull"   onclick="selectClass('pitbull')"   >PITBULL<small>Brawler</small></button>
+  <p class="note">Collect bones — bring them back to your glowing yellow den.</p>
+  <p class="note">Drop your bone to fight. Enemy dogs carry bones to their red den.</p>
+  <div style="margin-top:16px;font-size:14px;color:#ffe000">PICK YOUR DOG</div>
+  <div class="class-row">
+    <button class="cb on" id="b-mutt"      onclick="pickClass('mutt')">MUTT<small>Balanced</small></button>
+    <button class="cb"    id="b-bulldog"   onclick="pickClass('bulldog')">BULLDOG<small>Tanky &bull; Slow</small></button>
+    <button class="cb"    id="b-greyhound" onclick="pickClass('greyhound')">GREYHOUND<small>Fast &bull; Fragile</small></button>
+    <button class="cb"    id="b-husky"     onclick="pickClass('husky')">HUSKY<small>Tough Carrier</small></button>
+    <button class="cb"    id="b-pitbull"   onclick="pickClass('pitbull')">PITBULL<small>Brawler</small></button>
   </div>
-  <button class="cbtn" id="startBtn" onclick="startGame()">START GAME</button>
-  <div class="sub">
-    WASD: Move &nbsp;&bull;&nbsp; Mouse: Look &nbsp;&bull;&nbsp; E: Pick Up / Drop Bone<br>
-    Left Click: Bite &nbsp;&bull;&nbsp; Shift: Sprint &nbsp;&bull;&nbsp; Return bones to your YELLOW den<br>
-    You CANNOT fight while holding a bone &mdash; neither can they!
+  <button class="cb" id="startBtn" onclick="startGame()">START GAME</button>
+  <div class="controls-note">
+    WASD: Move &nbsp;&bull;&nbsp; Mouse: Rotate Camera &nbsp;&bull;&nbsp; E: Pick Up / Drop Bone<br>
+    Left Click: Bite attack &nbsp;&bull;&nbsp; Shift: Sprint<br>
+    You <b>cannot fight</b> while holding a bone — neither can enemies!
   </div>
 </div>
 
 <!-- DEATH SCREEN -->
-<div class="screen" id="deathScreen">
-  <h1 style="color:#f44;">YOU GOT GOT</h1>
+<div class="screen" id="deathScreen" style="display:none;background:rgba(60,0,0,0.92)">
+  <h1 style="color:#f44">YOU GOT GOT</h1>
   <div id="deathScore"></div>
-  <button class="cbtn" onclick="location.reload()" style="font-size:18px;padding:12px 36px;border-color:#f44;color:#f44;margin-top:12px;">TRY AGAIN</button>
+  <button class="cb" onclick="location.reload()" style="font-size:18px;padding:12px 36px;border-color:#f44;color:#f44;margin-top:12px">RETRY</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script>
-'use strict';
-
-// ──────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // CONFIG
-// ──────────────────────────────────────────────
-const W = 90; // world half-size
-const BASE_R = 4;
-const RENDER_SCALE = 0.55; // PS2 low-res look
+// ─────────────────────────────────────────────
+var W = 80;           // world half-size
+var BASE_R = 4.5;     // player den radius
+var RS = 0.5;         // render scale (PS2 low-res)
 
-const PLAYER_CLASSES = {
-  mutt:      { name:'MUTT',      hp:100, speed:5.2, dmg:15, bite:2.6, color:0x8B5C1A },
-  bulldog:   { name:'BULLDOG',   hp:180, speed:3.4, dmg:28, bite:2.3, color:0xD2691E },
-  greyhound: { name:'GREYHOUND', hp:65,  speed:9.0, dmg:10, bite:2.9, color:0xC0C0C0 },
-  husky:     { name:'HUSKY',     hp:115, speed:5.2, dmg:18, bite:2.6, color:0x7090AA },
-  pitbull:   { name:'PITBULL',   hp:120, speed:6.2, dmg:32, bite:2.4, color:0xCC7744 },
+var PCLASSES = {
+  mutt:      {name:'MUTT',      hp:100, spd:5.5, dmg:15, bite:2.8, col:0x8B5C1A},
+  bulldog:   {name:'BULLDOG',   hp:180, spd:3.5, dmg:28, bite:2.5, col:0xCC7744},
+  greyhound: {name:'GREYHOUND', hp:65,  spd:9.0, dmg:10, bite:3.0, col:0xBBBBBB},
+  husky:     {name:'HUSKY',     hp:115, spd:5.5, dmg:18, bite:2.8, col:0x7090AA},
+  pitbull:   {name:'PITBULL',   hp:120, spd:6.5, dmg:32, bite:2.6, col:0xCC6633},
+};
+var ETYPES = {
+  stray:    {name:'STRAY',   hp:55,  spd:3.2, dmg:10, agg:0.25, sc:0.85, col:0x777060},
+  swift:    {name:'SWIFT',   hp:48,  spd:7.5, dmg:8,  agg:0.15, sc:0.9,  col:0xAAAAAA},
+  bulldog:  {name:'BULLDOG', hp:140, spd:2.8, dmg:22, agg:0.75, sc:1.1,  col:0xAA7744},
+  pitbull:  {name:'PITBULL', hp:105, spd:5.8, dmg:30, agg:0.90, sc:1.0,  col:0xCC5533},
+  alpha:    {name:'ALPHA',   hp:260, spd:4.2, dmg:40, agg:1.0,  sc:1.45, col:0x880000},
 };
 
-const ENEMY_TYPES = {
-  stray:    { name:'STRAY',    hp:55,  speed:3.2, dmg:10, agg:0.25, scale:0.85, color:0x777060 },
-  greyhound:{ name:'SWIFT',    hp:48,  speed:7.5, dmg:8,  agg:0.15, scale:0.9,  color:0xAAAAAA },
-  bulldog:  { name:'BULLDOG',  hp:140, speed:2.6, dmg:22, agg:0.75, scale:1.1,  color:0xAA7744 },
-  pitbull:  { name:'PITBULL',  hp:105, speed:5.8, dmg:30, agg:0.90, scale:1.0,  color:0xCC6633 },
-  alpha:    { name:'ALPHA',    hp:260, speed:4.2, dmg:40, agg:1.0,  scale:1.45, color:0x880000 },
-};
-
-const ES = { WANDER:'W', SEEK:'S', CARRY:'C', ATTACK:'A', FLEE:'F', STUN:'X' };
-
-// ──────────────────────────────────────────────
-// STATE
-// ──────────────────────────────────────────────
-const G = {
-  started:false, dead:false,
-  score:0, wave:1, waveTimer:0, waveLen:60,
-  gameTime:0,
-  bones:[], enemies:[], obstacles:[], particles:[],
-  enemyDen:{x:0,z:0},
-  spawnTimer:0, spawnInterval:8, maxEnemies:7,
-  msgTimer:0,
-  biteCooldown:0, biteCooldownMax:0.55,
-  iframes:0,
-  selectedClass:'mutt',
-  comboTimer:0, combo:0,
-};
-
-const KB = {};
-let yaw=0, pitch=0;
-
-// ──────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // THREE SETUP
-// ──────────────────────────────────────────────
-const canvas = document.getElementById('gameCanvas');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:false});
+// ─────────────────────────────────────────────
+var canvas = document.getElementById('gameCanvas');
+var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:false});
 renderer.setClearColor(0x87CEEB);
 renderer.shadowMap.enabled = false;
 
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x87CEEB, 18, 65);
+var scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x87CEEB, 20, 70);
 
-const cam = new THREE.PerspectiveCamera(72, 1, 0.08, 120);
-cam.rotation.order = 'YXZ';
+var cam = new THREE.PerspectiveCamera(65, 1, 0.1, 120);
 
-// ──────────────────────────────────────────────
-// PLAYER OBJECT
-// ──────────────────────────────────────────────
-const player = {
-  pos: new THREE.Vector3(),
+function resize() {
+  var w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(Math.floor(w*RS), Math.floor(h*RS), false);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  cam.aspect = w / h;
+  cam.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Lights (added once, reused)
+var ambLight = new THREE.AmbientLight(0x999999);
+var sunLight = new THREE.DirectionalLight(0xFFFFCC, 0.8);
+sunLight.position.set(15, 30, 10);
+var fillLight = new THREE.DirectionalLight(0xAABBFF, 0.2);
+fillLight.position.set(-10, 10, -10);
+scene.add(ambLight, sunLight, fillLight);
+
+// ─────────────────────────────────────────────
+// GAME STATE
+// ─────────────────────────────────────────────
+var G = {
+  started:false, dead:false,
+  score:0, wave:1,
+  waveTimer:0, waveLen:60,
+  gameTime:0,
+  bones:[], enemies:[], obstacles:[], parts:[],
+  eDen:{x:30, z:30},
+  spawnT:0, spawnInterval:8, maxE:7,
+  msgTimer:0,
+  biteT:0, biteCd:0.55,
+  iframes:0,
+  comboT:0, combo:0,
+  selectedClass:'mutt',
+};
+
+var player = {
+  pos: new THREE.Vector3(0,0,0),
+  facing: 0,   // yaw the dog faces
   hp:100, maxHp:100,
   sp:100, maxSp:100,
   holdingBone:null,
   mesh:null,
-  cls: PLAYER_CLASSES.mutt,
+  cls: PCLASSES.mutt,
 };
 
-// ──────────────────────────────────────────────
-// HELPERS
-// ──────────────────────────────────────────────
-function lmat(color, emissive=0){
-  return new THREE.MeshLambertMaterial({color, emissive});
-}
-function dk(c, f=0.72){
-  return ((Math.round(((c>>16)&0xff)*f)<<16)|
-          (Math.round(((c>>8)&0xff)*f)<<8)|
-          Math.round((c&0xff)*f));
-}
-function rnd(a,b){ return a + Math.random()*(b-a); }
-function dist2(ax,az,bx,bz){ const dx=ax-bx,dz=az-bz; return dx*dx+dz*dz; }
+// Camera orbit
+var camYaw = Math.PI;   // start behind player
+var camSmooth = new THREE.Vector3(0, 5, 8);
+var CAM_DIST = 9;
+var CAM_H = 5;
 
-// ──────────────────────────────────────────────
+var KB = {};
+var mouseDX = 0;
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function lmat(c, em) { return new THREE.MeshLambertMaterial({color:c, emissive:em||0}); }
+function dk(c, f) { f=f||0.7; return (Math.round(((c>>16)&0xff)*f)<<16)|(Math.round(((c>>8)&0xff)*f)<<8)|Math.round((c&0xff)*f); }
+function rnd(a,b) { return a + Math.random()*(b-a); }
+function d2(ax,az,bx,bz) { var dx=ax-bx,dz=az-bz; return dx*dx+dz*dz; }
+function showMsg(t,s) { G.msgTimer=s||2; document.getElementById('msgEl').textContent=t; }
+
+// ─────────────────────────────────────────────
 // MESH FACTORIES
-// ──────────────────────────────────────────────
-function makeDogMesh(color, scale=1){
-  const g = new THREE.Group();
-  const m = lmat(color), md = lmat(dk(color)), me = lmat(dk(color,0.6));
+// ─────────────────────────────────────────────
+function makeDog(col, scale) {
+  scale = scale || 1;
+  var g = new THREE.Group();
+  var m = lmat(col), md = lmat(dk(col)), me = lmat(dk(col, 0.55));
+
   // body
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.5,1.2), m);
-  body.position.y = 0.5; g.add(body);
+  var body = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.5,1.2), m);
+  body.position.set(0, 0.5, 0); g.add(body);
+
+  // neck
+  var neck = new THREE.Mesh(new THREE.BoxGeometry(0.35,0.3,0.3), m);
+  neck.position.set(0, 0.78, 0.45); g.add(neck);
+
   // head
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.52,0.5,0.52), m);
-  head.position.set(0,0.87,0.58); g.add(head);
+  var head = new THREE.Mesh(new THREE.BoxGeometry(0.52,0.48,0.5), m);
+  head.position.set(0, 0.9, 0.72); g.add(head);
+
   // snout
-  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.22,0.28), md);
-  snout.position.set(0,0.78,0.86); g.add(snout);
+  var snout = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.2,0.28), md);
+  snout.position.set(0, 0.8, 0.99); g.add(snout);
+
   // nose
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.16,0.1,0.06), lmat(0x111111));
-  nose.position.set(0,0.84,1.0); g.add(nose);
+  var nose = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.09,0.05), lmat(0x111111));
+  nose.position.set(0, 0.86, 1.13); g.add(nose);
+
   // eyes
-  const eyeM = lmat(0x110000);
-  [-0.15,0.15].forEach(x=>{
-    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.09,0.09,0.05), eyeM);
-    eye.position.set(x,0.94,0.83); g.add(eye);
-  });
+  var eyeM = lmat(0x110000);
+  var el = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.04), eyeM);
+  el.position.set(-0.15, 0.96, 0.97); g.add(el);
+  var er = el.clone(); er.position.x = 0.15; g.add(er);
+
   // ears
-  [-0.23,0.23].forEach(x=>{
-    const ear = new THREE.Mesh(new THREE.BoxGeometry(0.16,0.22,0.06), me);
-    ear.position.set(x,1.1,0.52); g.add(ear);
+  [-0.23, 0.23].forEach(function(x) {
+    var ear = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.2,0.06), me);
+    ear.position.set(x, 1.1, 0.68); g.add(ear);
   });
-  // legs
-  const legs=[];
-  [[-0.22,0.35],[0.22,0.35],[-0.22,-0.35],[0.22,-0.35]].forEach(([lx,lz])=>{
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.48,0.18), md);
-    leg.position.set(lx,0.24,lz); g.add(leg); legs.push(leg);
+
+  // legs (4)
+  var legs = [];
+  [[-0.24,0.25,0.38],[0.24,0.25,0.38],[-0.24,0.25,-0.35],[0.24,0.25,-0.35]].forEach(function(p) {
+    var leg = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.48,0.18), md);
+    leg.position.set(p[0], p[1], p[2]); g.add(leg);
+    legs.push(leg);
   });
-  g.userData.legs=legs;
+  g.userData.legs = legs;
+
   // tail
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.36,0.12), m);
-  tail.position.set(0,0.75,-0.72); tail.rotation.x=0.45;
-  g.add(tail); g.userData.tail=tail;
-  // bone-in-mouth indicator
-  const bm = makeBoneMesh(0.55);
-  bm.position.set(0,0.7,1.05); bm.rotation.y=Math.PI/2; bm.visible=false;
-  g.add(bm); g.userData.boneMouth=bm;
+  var tail = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.38,0.12), m);
+  tail.position.set(0, 0.75, -0.72); tail.rotation.x = 0.5; g.add(tail);
+  g.userData.tail = tail;
+
+  // bone-in-mouth (hidden by default)
+  var bim = makeBone(0.5, false);
+  bim.position.set(0, 0.75, 1.18); bim.visible = false; g.add(bim);
+  g.userData.bim = bim;
 
   g.scale.setScalar(scale);
-  g.userData.walkT=0;
+  g.userData.walkT = 0;
   return g;
 }
 
-function makeBoneMesh(s=1, golden=false){
-  const g=new THREE.Group();
-  const c = golden?0xFFD700:0xFFFAE8;
-  const em = golden?0x886600:0;
-  const mat=lmat(c,em);
-  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.52,5),mat);
-  shaft.rotation.z=Math.PI/2; g.add(shaft);
-  [[-0.31,0.12,0],[-0.31,-0.12,0],[0.31,0.12,0],[0.31,-0.12,0]].forEach(([x,y,z])=>{
-    const b=new THREE.Mesh(new THREE.SphereGeometry(0.11,4,3),mat);
-    b.position.set(x,y,z); g.add(b);
+function makeBone(sc, golden) {
+  sc = sc || 1; golden = golden || false;
+  var g = new THREE.Group();
+  var mat = lmat(golden ? 0xFFD700 : 0xFFFAE0, golden ? 0x886600 : 0);
+  var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.52, 5), mat);
+  shaft.rotation.z = Math.PI/2; g.add(shaft);
+  [[-0.31,0.11],[-0.31,-0.11],[0.31,0.11],[0.31,-0.11]].forEach(function(p) {
+    var b = new THREE.Mesh(new THREE.SphereGeometry(0.11,4,3), mat);
+    b.position.set(p[0], p[1], 0); g.add(b);
   });
-  g.scale.setScalar(s);
+  g.scale.setScalar(sc);
   return g;
 }
 
-function makeTree(x,z){
-  const g=new THREE.Group();
-  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.32,2.1,5),lmat(0x4A2C0A));
-  trunk.position.y=1.05; g.add(trunk);
-  [[1.6,1.2,1.6,2.55],[1.1,0.9,1.1,3.25]].forEach(([w,h,d,y])=>{
-    const leaf=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),lmat(0x1E7A1E));
-    leaf.position.y=y; g.add(leaf);
+function makeTree(x, z) {
+  var g = new THREE.Group();
+  var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.3,2,5), lmat(0x4A2C0A));
+  trunk.position.y = 1; g.add(trunk);
+  [[1.5,1.1,1.5,2.5],[1.0,0.85,1.0,3.2]].forEach(function(v) {
+    var leaf = new THREE.Mesh(new THREE.BoxGeometry(v[0],v[1],v[2]), lmat(0x1E7A1E));
+    leaf.position.y = v[3]; g.add(leaf);
   });
-  g.position.set(x,0,z);
+  g.position.set(x, 0, z);
   return g;
 }
 
-function makeRock(x,z){
-  const g=new THREE.Group();
-  [[0.9,0.6,0.75,0,0],[0.55,0.5,0.55,0.35,-0.05],[0.45,0.42,0.58,-0.28,-0.05]].forEach(([w,h,d,ox,oz],i)=>{
-    const r=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),lmat(0x606060+i*0x0A0A0A));
-    r.position.set(ox,h/2-0.04,oz); r.rotation.y=Math.random()*Math.PI;
-    g.add(r);
+function makeRock(x, z) {
+  var g = new THREE.Group();
+  [[0.85,0.55,0.7,0,0.27,0],[0.5,0.45,0.5,0.3,0.22,0.1],[0.4,0.38,0.5,-0.25,0.19,0.15]].forEach(function(v,i) {
+    var r = new THREE.Mesh(new THREE.BoxGeometry(v[0],v[1],v[2]), lmat(0x606060+i*0x0A0A0A));
+    r.position.set(v[3],v[4],v[5]); r.rotation.y = rnd(0, Math.PI); g.add(r);
   });
-  g.position.set(x,0,z);
+  g.position.set(x, 0, z);
   return g;
 }
 
-// ──────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // WORLD GENERATION
-// ──────────────────────────────────────────────
-function generateWorld(){
-  // Ground with bumps
-  const geo=new THREE.PlaneGeometry(W*2,W*2,24,24);
-  const pos=geo.attributes.position;
-  for(let i=0;i<pos.count;i++){
-    const x=pos.getX(i), z=pos.getZ(i);
-    if(x*x+z*z>64) pos.setY(i,(Math.random()-0.5)*0.35);
+// ─────────────────────────────────────────────
+var worldBuilt = false;
+var worldMeshes = [];
+
+function buildWorld() {
+  // Ground
+  var geo = new THREE.PlaneGeometry(W*2+20, W*2+20, 20, 20);
+  var posAttr = geo.attributes.position;
+  for (var i = 0; i < posAttr.count; i++) {
+    var px = posAttr.getX(i), pz = posAttr.getZ(i);
+    if (px*px + pz*pz > 100) posAttr.setY(i, rnd(-0.15,0.15));
   }
   geo.computeVertexNormals();
-  scene.add(new THREE.Mesh(geo,lmat(0x4A7C3E))).rotation.x=-Math.PI/2;
+  var ground = new THREE.Mesh(geo, lmat(0x4A7C3E));
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
 
   // Player den
-  const denGeo=new THREE.CylinderGeometry(BASE_R,BASE_R,0.08,10);
-  const denMesh=new THREE.Mesh(denGeo,new THREE.MeshLambertMaterial({color:0xFFE000,emissive:0x998800}));
-  denMesh.position.y=0.04; scene.add(denMesh);
-  const denPole=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,2.8,5),lmat(0xFFE000,0xAA9900));
-  denPole.position.y=1.4; scene.add(denPole);
+  var denGeo = new THREE.CylinderGeometry(BASE_R, BASE_R, 0.07, 10);
+  var den = new THREE.Mesh(denGeo, lmat(0xFFE000, 0x998800));
+  den.position.y = 0.04; scene.add(den);
+  var denPole = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,3,6), lmat(0xFFE000, 0xAA9900));
+  denPole.position.y = 1.5; scene.add(denPole);
 
   // Enemy den
-  const edx=rnd(28,38)*(Math.random()>0.5?1:-1);
-  const edz=rnd(28,38)*(Math.random()>0.5?1:-1);
-  G.enemyDen={x:edx,z:edz};
-  const edMesh=new THREE.Mesh(denGeo.clone(),new THREE.MeshLambertMaterial({color:0xFF3300,emissive:0x881100}));
-  edMesh.position.set(edx,0.04,edz); scene.add(edMesh);
-  const edPole=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,2.8,5),lmat(0xFF3300,0xAA1100));
-  edPole.position.set(edx,1.4,edz); scene.add(edPole);
+  var ex = rnd(25,35) * (Math.random()>0.5?1:-1);
+  var ez = rnd(25,35) * (Math.random()>0.5?1:-1);
+  G.eDen = {x:ex, z:ez};
+  var eDen = new THREE.Mesh(denGeo.clone(), lmat(0xFF3300, 0x881100));
+  eDen.position.set(ex, 0.04, ez); scene.add(eDen);
+  var ePole = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,3,6), lmat(0xFF3300,0xAA1100));
+  ePole.position.set(ex, 1.5, ez); scene.add(ePole);
 
   // Obstacles
-  for(let i=0;i<50;i++){
-    let x,z,tries=0;
-    do{ x=rnd(-W+6,W-6); z=rnd(-W+6,W-6); tries++; }
-    while((x*x+z*z<100||dist2(x,z,edx,edz)<64)&&tries<30);
-    const isTree=Math.random()>0.38;
-    const mesh=isTree?makeTree(x,z):makeRock(x,z);
+  for (var i = 0; i < 45; i++) {
+    var ox, oz, tries = 0;
+    do {
+      ox = rnd(-W+6, W-6);
+      oz = rnd(-W+6, W-6);
+      tries++;
+    } while (tries < 30 && (ox*ox+oz*oz < 110 || d2(ox,oz,ex,ez) < 80));
+    var isTree = Math.random() > 0.38;
+    var mesh = isTree ? makeTree(ox,oz) : makeRock(ox,oz);
     scene.add(mesh);
-    G.obstacles.push({x,z,r:isTree?0.9:1.05,mesh});
+    G.obstacles.push({x:ox, z:oz, r: isTree?0.9:1.0});
   }
 
-  // Lighting
-  scene.add(new THREE.AmbientLight(0x999999));
-  const sun=new THREE.DirectionalLight(0xFFFFCC,0.75);
-  sun.position.set(12,24,10); scene.add(sun);
-  const fill=new THREE.DirectionalLight(0xAABBFF,0.25);
-  fill.position.set(-10,10,-10); scene.add(fill);
+  // Border fence posts (visual only)
+  for (var a = 0; a < Math.PI*2; a += 0.22) {
+    var fp = new THREE.Mesh(new THREE.BoxGeometry(0.3,1.2,0.3), lmat(0x5C3317));
+    fp.position.set(Math.cos(a)*W, 0.6, Math.sin(a)*W);
+    scene.add(fp);
+  }
 
-  // Initial bones
-  for(let i=0;i<18;i++) spawnBone();
+  // Spawn initial bones
+  for (var b = 0; b < 18; b++) spawnBone();
+  worldBuilt = true;
 }
 
-// ──────────────────────────────────────────────
-// BONE SYSTEM
-// ──────────────────────────────────────────────
-function spawnBone(forced=false){
-  let x,z,tries=0;
-  do{
-    x=rnd(-W+6,W-6); z=rnd(-W+6,W-6); tries++;
-    if(tries>60)break;
-  }while(x*x+z*z<49||nearObs(x,z,2));
+// ─────────────────────────────────────────────
+// BONES
+// ─────────────────────────────────────────────
+function spawnBone() {
+  var x, z, tries = 0;
+  do {
+    x = rnd(-W+6, W-6); z = rnd(-W+6, W-6); tries++;
+    if (tries > 60) break;
+  } while (x*x+z*z < 36 || nearObs(x,z,1.8));
 
-  const roll=Math.random();
-  const golden=roll>0.94;
-  const big=!golden&&roll>0.80;
-  const value=golden?5:big?3:1;
-  const sc=golden?1.35:big?1.1:0.75;
+  var roll = Math.random();
+  var golden = roll > 0.94;
+  var big = !golden && roll > 0.80;
+  var sc = golden ? 1.35 : big ? 1.1 : 0.75;
 
-  const mesh=makeBoneMesh(sc,golden);
-  mesh.position.set(x,0.32,z);
+  var mesh = makeBone(sc, golden);
+  mesh.position.set(x, 0.3, z);
   scene.add(mesh);
 
-  const bone={mesh,pos:new THREE.Vector3(x,0.32,z),value,golden,big,owner:null,bobT:Math.random()*6.28};
+  var bone = {
+    mesh: mesh,
+    pos: new THREE.Vector3(x, 0.3, z),
+    value: golden ? 5 : big ? 3 : 1,
+    golden: golden, big: big,
+    owner: null,
+    bobT: rnd(0, 6.28)
+  };
   G.bones.push(bone);
   return bone;
 }
 
-function nearObs(x,z,r){
-  for(const o of G.obstacles){
-    const dx=o.x-x,dz=o.z-z;
-    if(dx*dx+dz*dz<(o.r+r)*(o.r+r))return true;
+function nearObs(x, z, r) {
+  for (var i = 0; i < G.obstacles.length; i++) {
+    var o = G.obstacles[i];
+    var dx = o.x-x, dz = o.z-z;
+    if (dx*dx+dz*dz < (o.r+r)*(o.r+r)) return true;
   }
   return false;
 }
 
-function boneOnGround(bone){
-  bone.pos.x=bone.mesh.position.x;
-  bone.pos.z=bone.mesh.position.z;
-  bone.pos.y=0.32;
+function dropBoneToGround(bone, px, pz) {
+  bone.pos.set(px, 0.3, pz);
   bone.mesh.position.copy(bone.pos);
-  bone.mesh.visible=true;
-  bone.owner=null;
+  bone.mesh.visible = true;
+  bone.owner = null;
 }
 
-// ──────────────────────────────────────────────
-// ENEMY SYSTEM
-// ──────────────────────────────────────────────
-function spawnEnemy(typeKey){
-  const td=ENEMY_TYPES[typeKey]||ENEMY_TYPES.stray;
-  const angle=Math.random()*Math.PI*2;
-  const dist=rnd(W*0.38,W*0.48);
-  const sx=Math.cos(angle)*dist, sz=Math.sin(angle)*dist;
+// ─────────────────────────────────────────────
+// PLAYER
+// ─────────────────────────────────────────────
+function initPlayer() {
+  var cls = PCLASSES[G.selectedClass];
+  player.cls = cls;
+  player.hp = cls.hp; player.maxHp = cls.hp;
+  player.sp = 100; player.maxSp = 100;
+  player.pos.set(0, 0, 0);
+  player.facing = 0;
+  if (player.mesh) { scene.remove(player.mesh); }
+  player.mesh = makeDog(cls.col);
+  scene.add(player.mesh);
+  document.getElementById('dogName').textContent = cls.name;
+}
 
-  const mesh=makeDogMesh(td.color,td.scale);
-  mesh.position.set(sx,0,sz);
+function updatePlayer(dt) {
+  var cls = player.cls;
+  var sprinting = (KB.ShiftLeft || KB.ShiftRight);
+
+  // Stamina
+  var isMoving = KB.KeyW || KB.KeyS || KB.KeyA || KB.KeyD;
+  if (sprinting && isMoving) player.sp = Math.max(0, player.sp - 28*dt);
+  else player.sp = Math.min(player.maxSp, player.sp + 18*dt);
+
+  var spd = (sprinting && player.sp > 5) ? cls.spd * 1.65 :
+            player.holdingBone ? cls.spd * 0.68 : cls.spd;
+
+  // Move relative to camera yaw
+  var mx = 0, mz = 0;
+  if (KB.KeyW) { mx -= Math.sin(camYaw); mz -= Math.cos(camYaw); }
+  if (KB.KeyS) { mx += Math.sin(camYaw); mz += Math.cos(camYaw); }
+  if (KB.KeyA) { mx -= Math.cos(camYaw); mz += Math.sin(camYaw); }
+  if (KB.KeyD) { mx += Math.cos(camYaw); mz -= Math.sin(camYaw); }
+
+  var ml = Math.sqrt(mx*mx + mz*mz);
+  if (ml > 0) { mx /= ml; mz /= ml; }
+
+  // Apply movement
+  var nx = player.pos.x + mx*spd*dt;
+  var nz = player.pos.z + mz*spd*dt;
+
+  // World bounds
+  nx = Math.max(-W+1, Math.min(W-1, nx));
+  nz = Math.max(-W+1, Math.min(W-1, nz));
+
+  // Obstacle push-out
+  for (var i = 0; i < G.obstacles.length; i++) {
+    var o = G.obstacles[i];
+    var dx = nx - o.x, dz2 = nz - o.z;
+    var dist = Math.sqrt(dx*dx + dz2*dz2);
+    var minD = o.r + 0.5;
+    if (dist < minD && dist > 0) {
+      nx = o.x + (dx/dist)*minD;
+      nz = o.z + (dz2/dist)*minD;
+    }
+  }
+
+  player.pos.x = nx;
+  player.pos.z = nz;
+  player.pos.y = 0;
+
+  // Rotate dog to face movement direction
+  if (ml > 0) {
+    var targetFacing = Math.atan2(-mx, -mz);
+    // Smooth rotation
+    var da = targetFacing - player.facing;
+    while (da > Math.PI) da -= Math.PI*2;
+    while (da < -Math.PI) da += Math.PI*2;
+    player.facing += da * Math.min(1, 12*dt);
+  }
+
+  // Animate dog mesh
+  player.mesh.position.copy(player.pos);
+  player.mesh.rotation.y = player.facing;
+
+  if (ml > 0) {
+    player.mesh.userData.walkT += dt * 9;
+    var wt = player.mesh.userData.walkT;
+    var legs = player.mesh.userData.legs;
+    legs[0].rotation.x = Math.sin(wt) * 0.5;
+    legs[1].rotation.x = Math.sin(wt + Math.PI) * 0.5;
+    legs[2].rotation.x = Math.sin(wt + Math.PI) * 0.5;
+    legs[3].rotation.x = Math.sin(wt) * 0.5;
+    player.mesh.userData.tail.rotation.x = 0.45 + Math.sin(wt*1.3)*0.25;
+  }
+
+  // Bone follows in mouth
+  if (player.holdingBone) {
+    var bx = player.pos.x - Math.sin(player.facing)*0.6;
+    var bz = player.pos.z - Math.cos(player.facing)*0.6;
+    player.holdingBone.mesh.position.set(bx, 0.75, bz);
+    player.holdingBone.mesh.visible = true;
+
+    // Auto-deliver at den
+    if (player.pos.x*player.pos.x + player.pos.z*player.pos.z < BASE_R*BASE_R) {
+      deliverBone();
+    }
+  }
+
+  // Regen at base
+  if (player.pos.x*player.pos.x + player.pos.z*player.pos.z < BASE_R*BASE_R) {
+    player.hp = Math.min(player.maxHp, player.hp + 10*dt);
+    player.sp = Math.min(player.maxSp, player.sp + 20*dt);
+  }
+
+  // Timers
+  if (G.iframes > 0) G.iframes -= dt;
+  if (G.biteT > 0) G.biteT -= dt;
+  if (G.comboT > 0) { G.comboT -= dt; if(G.comboT<=0) G.combo=0; }
+}
+
+function updateCamera(dt) {
+  // Rotate camera with mouse
+  camYaw -= mouseDX * 0.003;
+  mouseDX = 0;
+
+  // Desired camera position: orbit around player
+  var tx = player.pos.x + Math.sin(camYaw) * CAM_DIST;
+  var tz = player.pos.z + Math.cos(camYaw) * CAM_DIST;
+  var ty = CAM_H;
+
+  // Smooth follow
+  var s = Math.min(1, 10*dt);
+  camSmooth.x += (tx - camSmooth.x) * s;
+  camSmooth.y += (ty - camSmooth.y) * s;
+  camSmooth.z += (tz - camSmooth.z) * s;
+
+  cam.position.copy(camSmooth);
+  cam.lookAt(player.pos.x, 0.8, player.pos.z);
+}
+
+// ─────────────────────────────────────────────
+// PLAYER ACTIONS
+// ─────────────────────────────────────────────
+function tryPickup() {
+  if (player.holdingBone) { dropBone(); return; }
+  var best = null, bestD = 3.0*3.0;
+  for (var i = 0; i < G.bones.length; i++) {
+    var b = G.bones[i];
+    if (b.owner !== null) continue;
+    var dx = b.pos.x - player.pos.x, dz = b.pos.z - player.pos.z;
+    var d2v = dx*dx+dz*dz;
+    if (d2v < bestD) { bestD = d2v; best = b; }
+  }
+  if (!best) { showMsg('No bone nearby!', 1.2); return; }
+  player.holdingBone = best;
+  best.owner = player;
+  best.mesh.visible = false;
+  player.mesh.userData.bim.visible = true;
+  showMsg(best.golden ? 'GOLDEN BONE! Get to your den!' : 'Bone! Get to your den!', 2.5);
+}
+
+function dropBone() {
+  if (!player.holdingBone) return;
+  var b = player.holdingBone;
+  dropBoneToGround(b, player.pos.x - Math.sin(player.facing)*0.8, player.pos.z - Math.cos(player.facing)*0.8);
+  player.holdingBone = null;
+  player.mesh.userData.bim.visible = false;
+  showMsg('Bone dropped.', 1);
+}
+
+function deliverBone() {
+  if (!player.holdingBone) return;
+  var b = player.holdingBone;
+  G.score += b.value;
+  G.combo++;
+  G.comboT = 3;
+  var bonus = G.combo > 1 ? G.combo - 1 : 0;
+  if (bonus > 0) G.score += bonus;
+  document.getElementById('scoreEl').textContent = 'BONES: ' + G.score;
+
+  scene.remove(b.mesh);
+  G.bones.splice(G.bones.indexOf(b), 1);
+  player.holdingBone = null;
+  player.mesh.userData.bim.visible = false;
+  player.hp = Math.min(player.maxHp, player.hp + 12);
+
+  var lbl = b.golden ? 'GOLDEN BONE!' : b.big ? 'Big bone!' : 'Bone!';
+  var msg = lbl + ' +' + b.value + (G.combo > 1 ? ' x'+G.combo+' COMBO +'+bonus+'!' : '');
+  showMsg(msg, 2.5);
+  setTimeout(function() { if(!G.dead) spawnBone(); }, rnd(2000,4000));
+}
+
+function tryBite() {
+  if (player.holdingBone) { showMsg('Drop bone to fight!', 1.5); return; }
+  if (G.biteT > 0) return;
+  G.biteT = G.biteCd;
+
+  var hit = false;
+  for (var i = 0; i < G.enemies.length; i++) {
+    var e = G.enemies[i];
+    if (e.dead) continue;
+    var dx = e.pos.x - player.pos.x, dz = e.pos.z - player.pos.z;
+    if (dx*dx+dz*dz < player.cls.bite * player.cls.bite) {
+      e.hp -= player.cls.dmg;
+      spawnParticles(e.pos.clone().setY(0.6), 0xFF8800, 7);
+      if (e.hp <= 0) killEnemy(e);
+      else {
+        if (e.holdingBone) eDropBone(e);
+        e.state = 'stun'; e.stunT = 0.4;
+      }
+      hit = true;
+    }
+  }
+  if (!hit) {
+    // Bite whiff — show small dust puff in facing direction
+    var wx = player.pos.x - Math.sin(player.facing)*1.5;
+    var wz = player.pos.z - Math.cos(player.facing)*1.5;
+    spawnParticles(new THREE.Vector3(wx, 0.5, wz), 0xCCCCCC, 3);
+  }
+}
+
+// ─────────────────────────────────────────────
+// ENEMIES
+// ─────────────────────────────────────────────
+function spawnEnemy(typeKey) {
+  var td = ETYPES[typeKey] || ETYPES.stray;
+  var angle = rnd(0, Math.PI*2);
+  var dist = rnd(W*0.38, W*0.48);
+  var sx = Math.cos(angle)*dist, sz = Math.sin(angle)*dist;
+
+  var mesh = makeDog(td.col, td.sc);
+  mesh.position.set(sx, 0, sz);
   scene.add(mesh);
 
-  // HP bar
-  const hpCont=new THREE.Group();
-  const hpBg=new THREE.Mesh(new THREE.PlaneGeometry(1.1,0.12),new THREE.MeshBasicMaterial({color:0x333333,depthTest:false}));
-  const hpFg=new THREE.Mesh(new THREE.PlaneGeometry(1.1,0.12),new THREE.MeshBasicMaterial({color:0xee2222,depthTest:false}));
-  hpFg.position.z=0.01;
-  hpCont.add(hpBg); hpCont.add(hpFg);
-  scene.add(hpCont);
+  // HP bar billboard
+  var hpGroup = new THREE.Group();
+  var bg = new THREE.Mesh(new THREE.PlaneGeometry(1.1,0.12), new THREE.MeshBasicMaterial({color:0x222222, depthTest:false}));
+  var fg = new THREE.Mesh(new THREE.PlaneGeometry(1.1,0.12), new THREE.MeshBasicMaterial({color:0xEE2222, depthTest:false}));
+  fg.position.z = 0.01;
+  hpGroup.add(bg); hpGroup.add(fg);
+  scene.add(hpGroup);
 
-  const e={
-    mesh, typeKey, td,
-    pos:new THREE.Vector3(sx,0,sz),
-    vel:new THREE.Vector3(),
-    hp:td.hp, maxHp:td.hp,
-    rot:Math.random()*Math.PI*2,
-    state:ES.WANDER,
-    targetBone:null,
-    holdingBone:null,
-    wanderAngle:Math.random()*Math.PI*2,
-    wanderT:0,
-    atkT:0, atkCd:0.85+Math.random()*0.4,
-    stateT:0, stunT:0,
-    detectR:13+Math.random()*5,
-    biteR:2.1,
-    dead:false,
-    walkT:0,
-    hpCont, hpFg,
+  var e = {
+    mesh: mesh, td: td, typeKey: typeKey,
+    pos: new THREE.Vector3(sx, 0, sz),
+    facing: rnd(0, Math.PI*2),
+    hp: td.hp, maxHp: td.hp,
+    state: 'wander',
+    targetBone: null, holdingBone: null,
+    wanderAngle: rnd(0,Math.PI*2), wanderT: 0,
+    atkT: 0, atkCd: 0.85 + rnd(0, 0.4),
+    stunT: 0, detectR: 13 + rnd(0,5),
+    biteR: 2.1, dead: false,
+    hpGroup: hpGroup, hpFg: fg,
+    walkT: 0,
   };
   G.enemies.push(e);
   return e;
 }
 
-function updateEnemy(e,dt){
-  if(e.dead)return;
+function updateEnemy(e, dt) {
+  if (e.dead) return;
 
-  // HP bar billboard
-  e.hpCont.position.copy(e.pos);
-  e.hpCont.position.y+=2.3*e.td.scale;
-  e.hpCont.lookAt(cam.position);
-  const hr=e.hp/e.maxHp;
-  e.hpFg.scale.x=Math.max(0,hr);
-  e.hpFg.position.x=(hr-1)*0.55;
+  // HP bar
+  e.hpGroup.position.copy(e.pos);
+  e.hpGroup.position.y += 2.3 * e.td.sc;
+  e.hpGroup.lookAt(cam.position);
+  var hr = e.hp / e.maxHp;
+  e.hpFg.scale.x = Math.max(0, hr);
+  e.hpFg.position.x = (hr - 1) * 0.55;
 
-  if(e.state===ES.STUN){
-    e.stunT-=dt;
-    if(e.stunT<=0)e.state=ES.WANDER;
+  // Stun
+  if (e.state === 'stun') {
+    e.stunT -= dt;
+    if (e.stunT <= 0) e.state = 'wander';
     e.mesh.position.copy(e.pos);
     return;
   }
 
-  e.stateT+=dt; e.atkT+=dt;
+  e.atkT += dt;
+  var pd = e.pos.distanceTo(player.pos);
 
-  const pd=e.pos.distanceTo(player.pos);
-  const agg=e.td.agg;
-
-  // ── STATE MACHINE ──
-  if(e.state===ES.WANDER){
-    // Attack player?
-    if(!e.holdingBone && pd<e.detectR && Math.random()<agg*dt*1.8){
-      e.state=ES.ATTACK; goto_state:;
-    }
-    // Seek bone?
-    const nb=nearestFreeBone(e.pos,22);
-    if(nb&&!e.holdingBone){ e.targetBone=nb; e.state=ES.SEEK; }
-    else {
-      // wander
-      e.wanderT-=dt;
-      if(e.wanderT<=0){ e.wanderAngle+=(Math.random()-0.5)*2.2; e.wanderT=1+Math.random()*2; }
-      moveE(e,Math.cos(e.wanderAngle)*e.td.speed*0.5,Math.sin(e.wanderAngle)*e.td.speed*0.5,dt);
-    }
-  }
-  else if(e.state===ES.SEEK){
-    if(!e.targetBone||e.targetBone.owner!==null){ e.targetBone=null; e.state=ES.WANDER; }
-    else if(!e.holdingBone&&pd<3.5&&agg>0.55){ e.state=ES.ATTACK; }
-    else {
-      const bp=e.targetBone.pos;
-      const bd=e.pos.distanceTo(bp);
-      if(bd<1.3){ grabBone(e,e.targetBone); e.state=ES.CARRY; }
+  if (e.state === 'wander') {
+    if (!e.holdingBone && pd < e.detectR && Math.random() < e.td.agg * dt * 2) {
+      e.state = 'attack';
+    } else {
+      var nb = nearestFreeBone(e.pos, 22);
+      if (nb) { e.targetBone = nb; e.state = 'seek'; }
       else {
-        const dx=bp.x-e.pos.x, dz=bp.z-e.pos.z;
-        const l=Math.sqrt(dx*dx+dz*dz);
-        moveE(e,(dx/l)*e.td.speed,(dz/l)*e.td.speed,dt);
+        e.wanderT -= dt;
+        if (e.wanderT <= 0) { e.wanderAngle += rnd(-1.5,1.5); e.wanderT = rnd(1,2.5); }
+        eMoveDir(e, Math.cos(e.wanderAngle)*e.td.spd*0.5, Math.sin(e.wanderAngle)*e.td.spd*0.5, dt);
       }
     }
   }
-  else if(e.state===ES.CARRY){
-    if(!e.holdingBone){ e.state=ES.WANDER; }
+  else if (e.state === 'seek') {
+    if (!e.targetBone || e.targetBone.owner !== null) { e.targetBone=null; e.state='wander'; }
+    else if (!e.holdingBone && pd < 3.5 && e.td.agg > 0.55) { e.state='attack'; }
     else {
-      const dx=G.enemyDen.x-e.pos.x, dz=G.enemyDen.z-e.pos.z;
-      const dd=Math.sqrt(dx*dx+dz*dz);
-      if(dd<3.2){ enemyScore(e); e.state=ES.WANDER; }
-      else {
-        const l=dd;
-        moveE(e,(dx/l)*e.td.speed*0.82,(dz/l)*e.td.speed*0.82,dt);
-      }
+      var bp = e.targetBone.pos;
+      var bdx = bp.x-e.pos.x, bdz = bp.z-e.pos.z;
+      var bd = Math.sqrt(bdx*bdx+bdz*bdz);
+      if (bd < 1.3) { eGrabBone(e, e.targetBone); e.state='carry'; }
+      else { eMoveDir(e, (bdx/bd)*e.td.spd, (bdz/bd)*e.td.spd, dt); }
     }
   }
-  else if(e.state===ES.ATTACK){
-    if(e.holdingBone){ e.state=ES.CARRY; }
-    else if(pd>e.detectR*1.6){ e.state=ES.WANDER; }
-    else if(e.hp<e.maxHp*0.18){ e.state=ES.FLEE; }
+  else if (e.state === 'carry') {
+    if (!e.holdingBone) { e.state='wander'; }
     else {
-      if(pd<e.biteR){
-        if(e.atkT>=e.atkCd){ bitePlayer(e); e.atkT=0; }
+      var ddx = G.eDen.x-e.pos.x, ddz = G.eDen.z-e.pos.z;
+      var dd = Math.sqrt(ddx*ddx+ddz*ddz);
+      if (dd < 3) { eScoreBone(e); e.state='wander'; }
+      else { eMoveDir(e, (ddx/dd)*e.td.spd*0.85, (ddz/dd)*e.td.spd*0.85, dt); }
+    }
+  }
+  else if (e.state === 'attack') {
+    if (e.holdingBone) { e.state='carry'; }
+    else if (pd > e.detectR*1.6) { e.state='wander'; }
+    else if (e.hp < e.maxHp*0.18) { e.state='flee'; }
+    else {
+      if (pd < e.biteR) {
+        if (e.atkT >= e.atkCd) { eBitePlayer(e); e.atkT=0; }
       } else {
-        const dx=player.pos.x-e.pos.x, dz=player.pos.z-e.pos.z;
-        const l=Math.sqrt(dx*dx+dz*dz);
-        moveE(e,(dx/l)*e.td.speed,(dz/l)*e.td.speed,dt);
+        var adx=player.pos.x-e.pos.x, adz=player.pos.z-e.pos.z;
+        var al=Math.sqrt(adx*adx+adz*adz);
+        eMoveDir(e, (adx/al)*e.td.spd, (adz/al)*e.td.spd, dt);
       }
     }
   }
-  else if(e.state===ES.FLEE){
-    if(e.hp>e.maxHp*0.38){ e.state=ES.WANDER; }
+  else if (e.state === 'flee') {
+    if (e.hp > e.maxHp*0.38) { e.state='wander'; }
     else {
-      const dx=e.pos.x-player.pos.x, dz=e.pos.z-player.pos.z;
-      const l=Math.sqrt(dx*dx+dz*dz)||1;
-      moveE(e,(dx/l)*e.td.speed,(dz/l)*e.td.speed,dt);
+      var fdx=e.pos.x-player.pos.x, fdz=e.pos.z-player.pos.z;
+      var fl=Math.sqrt(fdx*fdx+fdz*fdz)||1;
+      eMoveDir(e, (fdx/fl)*e.td.spd, (fdz/fl)*e.td.spd, dt);
     }
   }
 
-  // leg animation
-  if(e.vel.lengthSq()>0.01){
-    e.walkT+=dt*8;
-    const legs=e.mesh.userData.legs;
-    if(legs){
-      legs[0].rotation.x=Math.sin(e.walkT)*0.55;
-      legs[1].rotation.x=Math.sin(e.walkT+Math.PI)*0.55;
-      legs[2].rotation.x=Math.sin(e.walkT+Math.PI)*0.55;
-      legs[3].rotation.x=Math.sin(e.walkT)*0.55;
-    }
-    e.mesh.userData.tail.rotation.x=0.4+Math.sin(e.walkT*1.5)*0.25;
+  // Walk animation
+  if (e.pos.distanceTo(e.mesh.position) > 0.01 || e.state==='attack') {
+    e.walkT += dt*8;
+    var legs = e.mesh.userData.legs;
+    legs[0].rotation.x = Math.sin(e.walkT)*0.5;
+    legs[1].rotation.x = Math.sin(e.walkT+Math.PI)*0.5;
+    legs[2].rotation.x = Math.sin(e.walkT+Math.PI)*0.5;
+    legs[3].rotation.x = Math.sin(e.walkT)*0.5;
   }
 
   e.mesh.position.copy(e.pos);
-  e.mesh.rotation.y=e.rot;
-  e.vel.set(0,0,0);
+  e.mesh.rotation.y = e.facing;
 }
 
-function moveE(e,vx,vz,dt){
-  let nx=e.pos.x+vx*dt, nz=e.pos.z+vz*dt;
-  nx=Math.max(-W+2,Math.min(W-2,nx));
-  nz=Math.max(-W+2,Math.min(W-2,nz));
-  let blocked=false;
-  for(const o of G.obstacles){
-    const dx=nx-o.x, dz=nz-o.z;
-    if(dx*dx+dz*dz<(o.r+0.65)*(o.r+0.65)){ blocked=true; e.wanderAngle+=0.9; break; }
+function eMoveDir(e, vx, vz, dt) {
+  var nx = e.pos.x + vx*dt;
+  var nz = e.pos.z + vz*dt;
+  nx = Math.max(-W+2, Math.min(W-2, nx));
+  nz = Math.max(-W+2, Math.min(W-2, nz));
+  var blocked = false;
+  for (var i = 0; i < G.obstacles.length; i++) {
+    var o = G.obstacles[i];
+    var dx=nx-o.x, dz=nz-o.z;
+    if (dx*dx+dz*dz < (o.r+0.65)*(o.r+0.65)) { blocked=true; e.wanderAngle+=0.9; break; }
   }
-  if(!blocked){
-    e.pos.x=nx; e.pos.z=nz;
-    e.vel.set(vx,0,vz);
-    if(vx!==0||vz!==0) e.rot=Math.atan2(vx,vz);
+  if (!blocked) {
+    e.pos.x = nx; e.pos.z = nz;
+    if (vx!==0||vz!==0) {
+      var tf = Math.atan2(-vx, -vz);
+      var da = tf - e.facing;
+      while(da>Math.PI) da-=Math.PI*2;
+      while(da<-Math.PI) da+=Math.PI*2;
+      e.facing += da * Math.min(1, 10*dt);
+    }
   }
 }
 
-function nearestFreeBone(pos,range){
-  let best=null, bestD=range*range;
-  for(const b of G.bones){
-    if(b.owner!==null)continue;
-    const dx=b.pos.x-pos.x, dz=b.pos.z-pos.z;
-    const d2=dx*dx+dz*dz;
-    if(d2<bestD){ bestD=d2; best=b; }
+function nearestFreeBone(pos, range) {
+  var best=null, bestD=range*range;
+  for (var i=0;i<G.bones.length;i++) {
+    var b=G.bones[i];
+    if(b.owner!==null) continue;
+    var dx=b.pos.x-pos.x, dz=b.pos.z-pos.z;
+    var d2v=dx*dx+dz*dz;
+    if(d2v<bestD){bestD=d2v;best=b;}
   }
   return best;
 }
 
-function grabBone(e,bone){
-  bone.owner=e;
-  bone.mesh.visible=false;
-  e.holdingBone=bone;
-  if(e.mesh.userData.boneMouth) e.mesh.userData.boneMouth.visible=true;
+function eGrabBone(e, bone) {
+  bone.owner = e; bone.mesh.visible = false;
+  e.holdingBone = bone;
+  e.mesh.userData.bim.visible = true;
 }
 
-function dropEnemyBone(e){
-  if(!e.holdingBone)return;
-  const b=e.holdingBone;
-  boneOnGround(b);
-  e.holdingBone=null;
-  if(e.mesh.userData.boneMouth) e.mesh.userData.boneMouth.visible=false;
+function eDropBone(e) {
+  if (!e.holdingBone) return;
+  dropBoneToGround(e.holdingBone, e.pos.x, e.pos.z);
+  e.holdingBone = null;
+  e.mesh.userData.bim.visible = false;
 }
 
-function enemyScore(e){
-  if(!e.holdingBone)return;
-  const b=e.holdingBone;
-  scene.remove(b.mesh);
-  G.bones.splice(G.bones.indexOf(b),1);
-  e.holdingBone=null;
-  if(e.mesh.userData.boneMouth) e.mesh.userData.boneMouth.visible=false;
-  msg('Enemy scored a bone!',1.8);
-  setTimeout(()=>spawnBone(),4000);
+function eScoreBone(e) {
+  if (!e.holdingBone) return;
+  scene.remove(e.holdingBone.mesh);
+  G.bones.splice(G.bones.indexOf(e.holdingBone),1);
+  e.holdingBone = null;
+  e.mesh.userData.bim.visible = false;
+  showMsg('Enemy scored a bone!', 2);
+  setTimeout(function(){if(!G.dead)spawnBone();}, 4000);
 }
 
-function bitePlayer(e){
-  if(G.iframes>0)return;
-  if(player.holdingBone){
-    dropPlayerBone(true);
-    msg('They stole your bone!',2.5);
+function eBitePlayer(e) {
+  if (G.iframes > 0) return;
+  if (player.holdingBone) {
+    dropBone();
+    showMsg('They knocked your bone loose!', 2.5);
   }
-  player.hp=Math.max(0,player.hp-e.td.dmg);
-  G.iframes=0.45;
-  particles(player.pos.clone(),0xFF2200,7);
-  if(player.hp<=0) die();
+  player.hp = Math.max(0, player.hp - e.td.dmg);
+  G.iframes = 0.5;
+  spawnParticles(player.pos.clone().setY(0.6), 0xFF2200, 8);
+  if (player.hp <= 0) triggerDeath();
 }
 
-function killEnemy(e){
-  e.dead=true;
-  if(e.holdingBone) dropEnemyBone(e);
+function killEnemy(e) {
+  e.dead = true;
+  if (e.holdingBone) eDropBone(e);
   scene.remove(e.mesh);
-  scene.remove(e.hpCont);
-  particles(e.pos.clone(),0xFF6600,14);
-  msg(`${e.td.name} taken down!`,2);
-  // drop a bone where they died half the time
-  if(Math.random()>0.42){
-    const nb=spawnBone();
-    nb.pos.copy(e.pos); nb.pos.y=0.32;
+  scene.remove(e.hpGroup);
+  spawnParticles(e.pos.clone().setY(0.5), 0xFF6600, 14);
+  showMsg(e.td.name + ' defeated!', 2);
+  if (Math.random() > 0.45) {
+    var nb = spawnBone();
+    nb.pos.copy(e.pos); nb.pos.y = 0.3;
     nb.mesh.position.copy(nb.pos);
   }
 }
 
-// ──────────────────────────────────────────────
-// PLAYER ACTIONS
-// ──────────────────────────────────────────────
-function initPlayer(){
-  const cls=PLAYER_CLASSES[G.selectedClass];
-  player.cls=cls;
-  player.hp=cls.hp; player.maxHp=cls.hp;
-  player.sp=100; player.maxSp=100;
-  document.getElementById('dogLabel').textContent=cls.name;
-  player.mesh=makeDogMesh(cls.color);
-  player.mesh.visible=false; // first-person; hide self
-  scene.add(player.mesh);
-}
-
-function tryPickup(){
-  if(player.holdingBone)return;
-  let best=null,bestD=2.8*2.8;
-  for(const b of G.bones){
-    if(b.owner!==null)continue;
-    const dx=b.pos.x-player.pos.x, dz=b.pos.z-player.pos.z;
-    const d2=dx*dx+dz*dz;
-    if(d2<bestD){ bestD=d2; best=b; }
+// ─────────────────────────────────────────────
+// PARTICLES
+// ─────────────────────────────────────────────
+function spawnParticles(origin, color, n) {
+  for (var i=0; i<n; i++) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.1), new THREE.MeshBasicMaterial({color:color}));
+    m.position.copy(origin);
+    scene.add(m);
+    G.parts.push({
+      m: m,
+      v: new THREE.Vector3(rnd(-4,4), rnd(2,6), rnd(-4,4)),
+      life: rnd(0.5, 0.9)
+    });
   }
-  if(!best){ msg('No bone nearby!',1.2); return; }
-  player.holdingBone=best;
-  best.owner=player;
-  best.mesh.visible=false;
-  msg(best.golden?'GOLDEN BONE! Rush to your den!':'Bone grabbed! Get to your den!',2.5);
 }
 
-function dropPlayerBone(forced=false){
-  if(!player.holdingBone)return;
-  const b=player.holdingBone;
-  // At den?
-  const atDen=player.pos.x*player.pos.x+player.pos.z*player.pos.z<BASE_R*BASE_R;
-  if(atDen&&!forced){
-    // SCORE
-    G.score+=b.value;
-    // combo
-    G.comboTimer=3;
-    G.combo++;
-    const bonus=G.combo>1?` x${G.combo} COMBO!`:'';
-    if(G.combo>1) G.score+=G.combo-1;
-    document.getElementById('scoreEl').textContent=`BONES: ${G.score}`;
-    scene.remove(b.mesh);
-    G.bones.splice(G.bones.indexOf(b),1);
-    player.holdingBone=null;
-    const lbl=b.golden?'GOLDEN BONE':'bone';
-    msg(`${lbl} delivered! +${b.value}${bonus}`,2.8);
-    player.hp=Math.min(player.maxHp,player.hp+12);
-    setTimeout(()=>spawnBone(),rnd(2000,4000));
-    return;
+function updateParticles(dt) {
+  for (var i=G.parts.length-1; i>=0; i--) {
+    var p = G.parts[i];
+    p.life -= dt;
+    if (p.life <= 0) { scene.remove(p.m); G.parts.splice(i,1); continue; }
+    p.v.y -= 12*dt;
+    p.m.position.addScaledVector(p.v, dt);
   }
-  // Drop on ground
-  b.pos.copy(player.pos); b.pos.y=0.32;
-  b.mesh.position.copy(b.pos);
-  b.mesh.visible=true;
-  b.owner=null;
-  player.holdingBone=null;
-  if(!forced)msg('Bone dropped.',1);
 }
 
-function tryBite(){
-  if(player.holdingBone){ msg('Drop the bone to fight!',1.5); return; }
-  if(G.biteCooldown>0)return;
-  G.biteCooldown=G.biteCooldownMax;
-  let hit=false;
-  for(const e of G.enemies){
-    if(e.dead)continue;
-    const d=e.pos.distanceTo(player.pos);
-    if(d<player.cls.bite){
-      e.hp-=player.cls.dmg;
-      particles(e.pos.clone(),0xFF8800,8);
-      if(e.hp<=0){ killEnemy(e); }
-      else {
-        if(e.holdingBone) dropEnemyBone(e);
-        e.state=ES.STUN; e.stunT=0.38;
-      }
-      hit=true;
+// ─────────────────────────────────────────────
+// WAVES
+// ─────────────────────────────────────────────
+function updateWaves(dt) {
+  G.waveTimer += dt; G.spawnT += dt;
+  var alive = 0;
+  for(var i=0;i<G.enemies.length;i++) if(!G.enemies[i].dead) alive++;
+
+  if (G.spawnT >= G.spawnInterval && alive < G.maxE) {
+    G.spawnT = 0;
+    var pool = ['stray'];
+    if(G.wave>=2) pool.push('swift');
+    if(G.wave>=3) pool.push('bulldog');
+    if(G.wave>=4) pool.push('pitbull');
+    if(G.wave>=6) pool.push('alpha');
+    spawnEnemy(pool[Math.floor(Math.random()*pool.length)]);
+    if(G.wave>=3 && Math.random()>0.55) {
+      (function(p){setTimeout(function(){if(!G.dead)spawnEnemy(p[Math.floor(Math.random()*p.length)]);},1800);})(pool);
     }
   }
-  if(!hit) particles(player.pos.clone().add(new THREE.Vector3(-Math.sin(yaw)*1.5,0.8,-Math.cos(yaw)*1.5)),0xFFFFFF,3);
-}
 
-// ──────────────────────────────────────────────
-// PARTICLES
-// ──────────────────────────────────────────────
-function particles(origin,color,n=6){
-  for(let i=0;i<n;i++){
-    const m=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.1),new THREE.MeshBasicMaterial({color}));
-    m.position.copy(origin); m.position.y+=0.4; scene.add(m);
-    G.particles.push({m, v:new THREE.Vector3(rnd(-4,4),rnd(2,6),rnd(-4,4)), life:0.7+Math.random()*0.4});
-  }
-}
-function updateParticles(dt){
-  for(let i=G.particles.length-1;i>=0;i--){
-    const p=G.particles[i];
-    p.life-=dt;
-    if(p.life<=0){ scene.remove(p.m); G.particles.splice(i,1); continue; }
-    p.v.y-=12*dt;
-    p.m.position.addScaledVector(p.v,dt);
-    p.m.material.opacity=p.life;
+  if (G.waveTimer >= G.waveLen) {
+    G.wave++; G.waveTimer=0;
+    G.maxE = Math.min(8 + G.wave*2, 22);
+    G.spawnInterval = Math.max(2.5, 9 - G.wave*0.6);
+    showMsg('-- WAVE ' + G.wave + ' --', 3.5);
+    for(var b=0;b<3;b++) spawnBone();
+    if(G.wave%3===0) spawnBone(); // bonus bone
+    if(G.wave%5===0) setTimeout(function(){if(!G.dead){spawnEnemy('alpha');showMsg('ALPHA DOG INCOMING!',4);}},2000);
   }
 }
 
-// ──────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// DEATH
+// ─────────────────────────────────────────────
+function triggerDeath() {
+  G.dead = true;
+  document.getElementById('deathScreen').style.display = 'flex';
+  document.getElementById('deathScore').textContent =
+    'Score: ' + G.score + ' bones  |  Wave ' + G.wave + '  |  ' + Math.floor(G.gameTime) + 's';
+  document.exitPointerLock();
+}
+
+// ─────────────────────────────────────────────
 // HUD
-// ──────────────────────────────────────────────
-function msg(text,dur=2){
-  G.msgTimer=dur;
-  document.getElementById('botMsg').textContent=text;
-}
+// ─────────────────────────────────────────────
+function updateHUD() {
+  document.getElementById('hpFill').style.width = (player.hp/player.maxHp*100) + '%';
+  document.getElementById('spFill').style.width = (player.sp/player.maxSp*100) + '%';
+  var alive=0; for(var i=0;i<G.enemies.length;i++) if(!G.enemies[i].dead) alive++;
+  document.getElementById('waveEl').textContent = 'WAVE ' + G.wave + ' | ENEMIES: ' + alive;
 
-function updateHUD(){
-  document.getElementById('hpFill').style.width=(player.hp/player.maxHp*100)+'%';
-  document.getElementById('spFill').style.width=(player.sp/player.maxSp*100)+'%';
-  const alive=G.enemies.filter(e=>!e.dead).length;
-  document.getElementById('waveEl').textContent=`WAVE ${G.wave} | ENEMIES: ${alive}`;
-  const hint=document.getElementById('botHint');
-  if(player.holdingBone){
-    const at=player.pos.x*player.pos.x+player.pos.z*player.pos.z<BASE_R*BASE_R;
-    hint.textContent=at?'[WALK] Return to den (auto-deliver)!':'[E] Drop to fight  |  Rush to YELLOW den!';
-    hint.style.color=player.holdingBone.golden?'#FFD700':'#FFFACD';
+  var be = document.getElementById('boneEl');
+  if (player.holdingBone) {
+    var atDen = player.pos.x*player.pos.x+player.pos.z*player.pos.z < BASE_R*BASE_R;
+    be.textContent = atDen ? 'Walk into den to deliver!' : (player.holdingBone.golden ? 'GOLDEN BONE - RUN!' : 'Carrying bone - get to den!');
+    be.style.color = player.holdingBone.golden ? '#FFD700' : '#ffe000';
   } else {
-    hint.textContent=G.biteCooldown>0?'[...BITE COOLDOWN...]':'[E] Grab Bone  |  [CLICK] Bite  |  [SHIFT] Sprint';
-    hint.style.color='#888';
+    be.textContent = G.biteT > 0 ? '[bite cooldown...]' : '';
+    be.style.color = '#888';
   }
+
+  // Nearby bone indicator
+  var nearBone = nearestFreeBone(player.pos, 3.0);
+  if (nearBone && !player.holdingBone) {
+    be.textContent = '[E] Pick up bone!';
+    be.style.color = '#fff';
+  }
+
+  if (G.msgTimer > 0) G.msgTimer -= 1/60;
+  else document.getElementById('msgEl').textContent = '';
 }
 
-function drawMinimap(){
-  const mc=document.getElementById('minimap');
-  const ctx=mc.getContext('2d');
-  const mw=mc.width, mh=mc.height;
-  const sc=mw/(W*2);
-  const cx=mw/2, cy=mh/2;
-  ctx.fillStyle='rgba(0,0,0,0.72)'; ctx.fillRect(0,0,mw,mh);
+function drawMinimap() {
+  var mc = document.getElementById('minimap');
+  var ctx = mc.getContext('2d');
+  var mw = mc.width, mh = mc.height;
+  var sc = mw / (W*2);
+  var cx = mw/2, cy = mh/2;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0,0,mw,mh);
+
   // base
   ctx.fillStyle='#FFE000'; ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fill();
   // enemy den
   ctx.fillStyle='#FF3300';
-  ctx.beginPath(); ctx.arc(cx+G.enemyDen.x*sc,cy+G.enemyDen.z*sc,5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx+G.eDen.x*sc,cy+G.eDen.z*sc,5,0,Math.PI*2); ctx.fill();
+
   // bones
-  ctx.fillStyle='#fff';
-  for(const b of G.bones){
+  for(var i=0;i<G.bones.length;i++){
+    var b=G.bones[i];
     if(b.owner)continue;
-    ctx.fillRect(cx+b.pos.x*sc-1,cy+b.pos.z*sc-1,2,2);
+    ctx.fillStyle=b.golden?'#FFD700':'#fff';
+    ctx.fillRect(cx+b.pos.x*sc-1,cy+b.pos.z*sc-1,3,3);
   }
+
   // enemies
-  for(const e of G.enemies){
+  for(var i=0;i<G.enemies.length;i++){
+    var e=G.enemies[i];
     if(e.dead)continue;
-    ctx.fillStyle=e.state===ES.ATTACK?'#FF4400':'#FF8800';
+    ctx.fillStyle=e.state==='attack'?'#FF2200':'#FF8800';
     ctx.fillRect(cx+e.pos.x*sc-2,cy+e.pos.z*sc-2,4,4);
   }
-  // player
+
+  // player (triangle showing facing)
+  var px=cx+player.pos.x*sc, pz=cy+player.pos.z*sc;
   ctx.fillStyle='#00FF44';
-  ctx.fillRect(cx+player.pos.x*sc-3,cy+player.pos.z*sc-3,6,6);
-  // border
-  ctx.strokeStyle='#444'; ctx.lineWidth=1; ctx.strokeRect(0,0,mw,mh);
+  ctx.beginPath();
+  ctx.moveTo(px - Math.sin(player.facing)*5, pz - Math.cos(player.facing)*5);
+  ctx.lineTo(px + Math.sin(player.facing+Math.PI/2)*3, pz + Math.cos(player.facing+Math.PI/2)*3);
+  ctx.lineTo(px + Math.sin(player.facing-Math.PI/2)*3, pz + Math.cos(player.facing-Math.PI/2)*3);
+  ctx.closePath(); ctx.fill();
+
+  ctx.strokeStyle='#555'; ctx.lineWidth=1; ctx.strokeRect(0,0,mw,mh);
 }
 
-// ──────────────────────────────────────────────
-// WAVE SYSTEM
-// ──────────────────────────────────────────────
-function updateWaves(dt){
-  G.waveTimer+=dt; G.spawnTimer+=dt;
-  const alive=G.enemies.filter(e=>!e.dead).length;
-  if(G.spawnTimer>=G.spawnInterval&&alive<G.maxEnemies){
-    G.spawnTimer=0;
-    const pool=['stray'];
-    if(G.wave>=2)pool.push('greyhound');
-    if(G.wave>=3)pool.push('bulldog');
-    if(G.wave>=4)pool.push('pitbull');
-    if(G.wave>=6)pool.push('alpha');
-    const t=pool[Math.floor(Math.random()*pool.length)];
-    spawnEnemy(t);
-    if(G.wave>=3&&Math.random()>0.55) setTimeout(()=>{ if(!G.dead) spawnEnemy(pool[Math.floor(Math.random()*pool.length)]); },1800);
-  }
-  if(G.waveTimer>=G.waveLen){
-    G.wave++; G.waveTimer=0;
-    G.maxEnemies=Math.min(8+G.wave*2,22);
-    G.spawnInterval=Math.max(2.5,9-G.wave*0.6);
-    msg(`── WAVE ${G.wave} ──`,3.5);
-    for(let i=0;i<3;i++) spawnBone();
-    if(G.wave%3===0) spawnBone(true);
-    // every 5 waves spawn an alpha
-    if(G.wave%5===0){
-      setTimeout(()=>{ if(!G.dead){ spawnEnemy('alpha'); msg('ALPHA DOG INCOMING!',4); }},2000);
-    }
-  }
-}
-
-// ──────────────────────────────────────────────
-// PLAYER UPDATE
-// ──────────────────────────────────────────────
-function updatePlayer(dt){
-  const sprinting=(KB.ShiftLeft||KB.ShiftRight)&&(KB.KeyW||KB.KeyA||KB.KeyS||KB.KeyD);
-  if(sprinting) player.sp=Math.max(0,player.sp-28*dt);
-  else player.sp=Math.min(player.maxSp,player.sp+18*dt);
-
-  const spd=sprinting&&player.sp>5?player.cls.speed*1.65:
-            player.holdingBone?player.cls.speed*0.68:player.cls.speed;
-
-  let mx=0,mz=0;
-  if(KB.KeyW){mx-=Math.sin(yaw); mz-=Math.cos(yaw);}
-  if(KB.KeyS){mx+=Math.sin(yaw); mz+=Math.cos(yaw);}
-  if(KB.KeyA){mx-=Math.cos(yaw); mz+=Math.sin(yaw);}
-  if(KB.KeyD){mx+=Math.cos(yaw); mz-=Math.sin(yaw);}
-  const ml=Math.sqrt(mx*mx+mz*mz)||1;
-  if(mx||mz){ mx/=ml; mz/=ml; }
-
-  let nx=player.pos.x+mx*spd*dt;
-  let nz=player.pos.z+mz*spd*dt;
-  nx=Math.max(-W+1,Math.min(W-1,nx));
-  nz=Math.max(-W+1,Math.min(W-1,nz));
-  for(const o of G.obstacles){
-    const dx=nx-o.x, dz=nz-o.z;
-    const d=Math.sqrt(dx*dx+dz*dz);
-    const md2=o.r+0.52;
-    if(d<md2&&d>0){ nx=o.x+(dx/d)*md2; nz=o.z+(dz/d)*md2; }
-  }
-  player.pos.x=nx; player.pos.z=nz;
-
-  // Camera
-  cam.position.set(player.pos.x,player.pos.y+1.62,player.pos.z);
-  cam.rotation.y=yaw; cam.rotation.x=pitch;
-
-  // Bone floats in front of camera when carried
-  if(player.holdingBone){
-    const b=player.holdingBone;
-    const bx=player.pos.x-Math.sin(yaw)*0.7;
-    const bz=player.pos.z-Math.cos(yaw)*0.7;
-    b.mesh.position.set(bx,1.25,bz);
-    b.mesh.rotation.y=yaw; b.mesh.visible=true;
-    // auto-deliver at den
-    if(player.pos.x*player.pos.x+player.pos.z*player.pos.z<BASE_R*BASE_R){
-      dropPlayerBone();
-    }
-  }
-
-  // Regen at base
-  if(player.pos.x*player.pos.x+player.pos.z*player.pos.z<BASE_R*BASE_R){
-    player.hp=Math.min(player.maxHp,player.hp+10*dt);
-    player.sp=Math.min(player.maxSp,player.sp+25*dt);
-  }
-
-  // Combo decay
-  if(G.comboTimer>0){ G.comboTimer-=dt; if(G.comboTimer<=0) G.combo=0; }
-
-  // Iframes
-  if(G.iframes>0) G.iframes-=dt;
-  if(G.biteCooldown>0) G.biteCooldown-=dt;
-}
-
-// ──────────────────────────────────────────────
-// DEATH
-// ──────────────────────────────────────────────
-function die(){
-  G.dead=true;
-  document.getElementById('deathScreen').style.display='flex';
-  document.getElementById('deathScore').textContent=
-    `Score: ${G.score} bones  |  Wave ${G.wave}  |  Time: ${Math.floor(G.gameTime)}s`;
-  document.exitPointerLock();
-}
-
-// ──────────────────────────────────────────────
-// GAME LOOP
-// ──────────────────────────────────────────────
-let lastT=0;
-function loop(t){
+// ─────────────────────────────────────────────
+// MAIN LOOP
+// ─────────────────────────────────────────────
+var lastT = 0;
+function loop(t) {
   requestAnimationFrame(loop);
-  const dt=Math.min((t-lastT)/1000,0.05); lastT=t;
+  var dt = Math.min((t - lastT) / 1000, 0.05);
+  lastT = t;
 
-  if(!G.started){
-    // Rotate camera over scene for start screen
-    cam.position.set(Math.sin(t*0.0003)*14,6,Math.cos(t*0.0003)*14);
-    cam.lookAt(0,0,0);
-    renderer.render(scene,cam);
+  if (!G.started) {
+    // Spin camera on start screen
+    cam.position.set(Math.sin(t*0.0003)*16, 8, Math.cos(t*0.0003)*16);
+    cam.lookAt(0, 0, 0);
+    renderer.render(scene, cam);
     return;
   }
-  if(G.dead){ renderer.render(scene,cam); return; }
+  if (G.dead) { renderer.render(scene, cam); return; }
 
-  G.gameTime+=dt;
+  G.gameTime += dt;
 
+  updateCamera(dt);
   updatePlayer(dt);
 
-  // Enemies
-  for(let i=G.enemies.length-1;i>=0;i--){
-    const e=G.enemies[i];
-    if(e.dead){ G.enemies.splice(i,1); continue; }
+  // Update enemies
+  for (var i=G.enemies.length-1; i>=0; i--) {
+    var e=G.enemies[i];
+    if(e.dead){G.enemies.splice(i,1);continue;}
     updateEnemy(e,dt);
   }
 
   // Bob bones
-  for(const b of G.bones){
+  for (var i=0; i<G.bones.length; i++) {
+    var b=G.bones[i];
     if(b.owner)continue;
-    b.bobT+=dt*2.2;
-    b.mesh.position.y=0.32+Math.sin(b.bobT)*0.1;
-    b.mesh.rotation.y+=dt*0.6;
+    b.bobT += dt*2.2;
+    b.mesh.position.y = 0.3 + Math.sin(b.bobT)*0.1;
+    b.mesh.rotation.y += dt*0.6;
   }
 
   updateParticles(dt);
   updateWaves(dt);
 
-  // Ensure enough bones exist
-  if(G.bones.filter(b=>!b.owner).length<6) spawnBone();
-
-  // Msg timer
-  if(G.msgTimer>0){
-    G.msgTimer-=dt;
-    if(G.msgTimer<=0) document.getElementById('botMsg').textContent='';
-  }
+  // Keep minimum bones
+  var freeBones=0; for(var i=0;i<G.bones.length;i++) if(!G.bones[i].owner) freeBones++;
+  if(freeBones < 6) spawnBone();
 
   updateHUD();
   drawMinimap();
-  renderer.render(scene,cam);
+  renderer.render(scene, cam);
 }
 
-// ──────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // INPUT
-// ──────────────────────────────────────────────
-document.addEventListener('keydown',e=>{
-  KB[e.code]=true;
-  if(!G.started||G.dead)return;
-  if(e.code==='KeyE'){
-    if(player.holdingBone) dropPlayerBone();
-    else tryPickup();
-  }
-  e.preventDefault&&(e.code==='Space'||e.code.startsWith('Arrow'))&&e.preventDefault();
+// ─────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  KB[e.code] = true;
+  if (!G.started || G.dead) return;
+  if (e.code === 'KeyE') tryPickup();
+  if (e.code === 'Space') { e.preventDefault(); tryBite(); }
 });
-document.addEventListener('keyup',e=>{ KB[e.code]=false; });
-document.addEventListener('mousedown',e=>{
-  if(!G.started||G.dead)return;
-  if(e.button===0) tryBite();
+document.addEventListener('keyup', function(e) { KB[e.code] = false; });
+document.addEventListener('mousedown', function(e) {
+  if (!G.started || G.dead) return;
+  if (e.button === 0) tryBite();
 });
-document.addEventListener('mousemove',e=>{
-  if(!G.started||G.dead)return;
-  if(document.pointerLockElement===canvas){
-    yaw-=e.movementX*0.0022;
-    pitch=Math.max(-Math.PI/2.6,Math.min(Math.PI/2.6,pitch-e.movementY*0.0022));
-  }
+document.addEventListener('mousemove', function(e) {
+  if (!G.started || G.dead) return;
+  if (document.pointerLockElement === canvas) mouseDX += e.movementX;
 });
-canvas.addEventListener('click',()=>{ if(G.started&&!G.dead) canvas.requestPointerLock(); });
+canvas.addEventListener('click', function() {
+  if (G.started && !G.dead) canvas.requestPointerLock();
+});
 
-// ──────────────────────────────────────────────
-// RESIZE
-// ──────────────────────────────────────────────
-function resize(){
-  const w=window.innerWidth,h=window.innerHeight;
-  renderer.setSize(Math.floor(w*RENDER_SCALE),Math.floor(h*RENDER_SCALE),false);
-  canvas.style.width=w+'px'; canvas.style.height=h+'px';
-  cam.aspect=w/h; cam.updateProjectionMatrix();
-}
-window.addEventListener('resize',resize); resize();
-
-// ──────────────────────────────────────────────
-// PRE-GAME SCENE (start screen backdrop)
-// ──────────────────────────────────────────────
-(function buildBackdrop(){
-  const g=new THREE.PlaneGeometry(W*2,W*2);
-  const ground=new THREE.Mesh(g,lmat(0x4A7C3E)); ground.rotation.x=-Math.PI/2; scene.add(ground);
-  scene.add(new THREE.AmbientLight(0x999999));
-  const sun=new THREE.DirectionalLight(0xFFFFCC,0.75);
-  sun.position.set(12,24,10); scene.add(sun);
-  // a few decorative trees
-  for(let i=0;i<8;i++){
-    const a=i/8*Math.PI*2;
-    scene.add(makeTree(Math.cos(a)*20,Math.sin(a)*20));
-  }
-})();
-requestAnimationFrame(loop);
-
-// ──────────────────────────────────────────────
-// START SCREEN
-// ──────────────────────────────────────────────
-function selectClass(c){
-  ['mutt','bulldog','greyhound','husky','pitbull'].forEach(k=>{
-    document.getElementById('btn-'+k).classList.toggle('sel', k===c);
+// ─────────────────────────────────────────────
+// START SCREEN FUNCTIONS (global, hoisted)
+// ─────────────────────────────────────────────
+function pickClass(c) {
+  ['mutt','bulldog','greyhound','husky','pitbull'].forEach(function(k) {
+    document.getElementById('b-'+k).className = 'cb' + (k===c?' on':'');
   });
-  G.selectedClass=c;
+  G.selectedClass = c;
 }
-function startGame(){
-  document.getElementById('startScreen').style.display='none';
-  G.started=true;
+
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  buildWorld();
   initPlayer();
-  generateWorld();
+  // Place camera behind player
+  camSmooth.set(0, CAM_H, CAM_DIST);
   spawnEnemy('stray'); spawnEnemy('stray');
+  G.started = true;
   canvas.requestPointerLock();
-  msg('Find bones! Bring them to your YELLOW den!',4);
+  showMsg('Find bones! Bring them to your yellow den!', 4);
 }
+
+// ─────────────────────────────────────────────
+// BOOT — build backdrop for start screen
+// ─────────────────────────────────────────────
+(function() {
+  var g = new THREE.PlaneGeometry(W*2+20, W*2+20);
+  var gnd = new THREE.Mesh(g, lmat(0x4A7C3E));
+  gnd.rotation.x = -Math.PI/2;
+  scene.add(gnd);
+  for (var i=0;i<10;i++) {
+    var a = i/10*Math.PI*2;
+    scene.add(makeTree(Math.cos(a)*18, Math.sin(a)*18));
+  }
+  cam.position.set(0, 8, 16);
+  cam.lookAt(0,0,0);
+})();
+
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
