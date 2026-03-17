@@ -93,9 +93,9 @@ body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
   </div>
   <button class="cb" id="sb" onclick="startGame()">START GAME</button>
   <div class="ctrl">
-    A / D or Mouse: Turn &nbsp;&bull;&nbsp; W / S: Move &nbsp;&bull;&nbsp; E: Pick Up / Drop<br>
-    Hold Left Click: Charge Bite (release to fire) &nbsp;&bull;&nbsp; Shift: Sprint<br>
-    Space: Dodge Roll &nbsp;&bull;&nbsp; Q: Growl (Fear Aura) &nbsp;&bull;&nbsp; Walk into yellow den to score
+    WASD or Arrow Keys: Move &amp; Turn &nbsp;&bull;&nbsp; E: Pick Up / Drop<br>
+    F: Bite (hold to charge) &nbsp;&bull;&nbsp; Space: Dodge Roll &nbsp;&bull;&nbsp; Q: Growl &nbsp;&bull;&nbsp; Shift: Sprint<br>
+    Walk into yellow den to score &mdash; <em>no mouse required!</em>
   </div>
 </div>
 
@@ -120,18 +120,18 @@ var CAM_H = 5.5;
 var ROT_SPD = 2.6;
 
 var PC = {
-  mutt:      {n:'MUTT',      hp:100,spd:5.5,dmg:16,bite:2.8,col:0xAA7740,cc:0xDD4422},
-  bulldog:   {n:'BULLDOG',   hp:185,spd:3.4,dmg:28,bite:2.5,col:0xCC8850,cc:0x442200},
-  greyhound: {n:'GREYHOUND', hp:65, spd:9.2,dmg:10,bite:3.0,col:0xCCCCCC,cc:0x6688AA},
-  husky:     {n:'HUSKY',     hp:120,spd:5.5,dmg:18,bite:2.8,col:0x8899BB,cc:0xFFFFFF},
-  pitbull:   {n:'PITBULL',   hp:125,spd:6.4,dmg:33,bite:2.6,col:0xBB6633,cc:0xFF2200},
+  mutt:      {n:'MUTT',      hp:100,spd:5.5,dmg:16,bite:2.8,col:0xFF6600,cc:0xFF00FF},
+  bulldog:   {n:'BULLDOG',   hp:185,spd:3.4,dmg:28,bite:2.5,col:0xFF0088,cc:0x00FFFF},
+  greyhound: {n:'GREYHOUND', hp:65, spd:9.2,dmg:10,bite:3.0,col:0x00FFFF,cc:0xFF00FF},
+  husky:     {n:'HUSKY',     hp:120,spd:5.5,dmg:18,bite:2.8,col:0x4488FF,cc:0xFFFF00},
+  pitbull:   {n:'PITBULL',   hp:125,spd:6.4,dmg:33,bite:2.6,col:0x88FF00,cc:0xFF2200},
 };
 var ET = {
-  stray:   {n:'STRAY',   hp:55, spd:3.2,dmg:10,agg:0.25,sc:0.85,col:0x887766,cc:0x444444},
-  swift:   {n:'SWIFT',   hp:48, spd:7.8,dmg:8, agg:0.15,sc:0.9, col:0xBBBBBB,cc:0x888888},
-  bulldog: {n:'BULLDOG', hp:145,spd:2.8,dmg:22,agg:0.75,sc:1.1, col:0xAA7744,cc:0x442200},
-  pitbull: {n:'PITBULL', hp:110,spd:5.8,dmg:30,agg:0.90,sc:1.0, col:0xCC5533,cc:0xFF2200},
-  alpha:   {n:'ALPHA',   hp:265,spd:4.2,dmg:40,agg:1.0, sc:1.5, col:0x990000,cc:0xFF0000},
+  stray:   {n:'STRAY',   hp:55, spd:3.2,dmg:10,agg:0.25,sc:0.85,col:0xFF44FF,cc:0x222222},
+  swift:   {n:'SWIFT',   hp:48, spd:7.8,dmg:8, agg:0.15,sc:0.9, col:0x00FFDD,cc:0xFF8800},
+  bulldog: {n:'BULLDOG', hp:145,spd:2.8,dmg:22,agg:0.75,sc:1.1, col:0xFF2288,cc:0x00FFFF},
+  pitbull: {n:'PITBULL', hp:110,spd:5.8,dmg:30,agg:0.90,sc:1.0, col:0xAAFF00,cc:0xFF0000},
+  alpha:   {n:'ALPHA',   hp:265,spd:4.2,dmg:40,agg:1.0, sc:1.5, col:0xFF0000,cc:0xFFFFFF},
 };
 
 // ─────────────────────────────────────────────
@@ -146,10 +146,11 @@ function th(x, z) {
   return h * f;
 }
 
-function htc(h) { // height to vertex color
-  var t = Math.max(0, Math.min(1, (h + 2) / 5));
-  // valley=dark green, hilltop=bright lime green
-  return [0.18+t*0.20, 0.44+t*0.24, 0.10+t*0.06];
+function htc(h) { // height to vertex color — psychedelic
+  if (h < -0.5) return [0.90, 0.04, 0.75]; // hot magenta valley
+  if (h < 0.5)  return [0.55, 0.00, 1.00]; // electric purple midland
+  if (h < 2.0)  return [0.10, 1.00, 0.20]; // acid green slope
+  return [1.00, 0.95, 0.00];               // neon yellow peak
 }
 
 // ─────────────────────────────────────────────
@@ -179,6 +180,14 @@ denLight.position.set(0, 2, 0);
 scene.add(denLight);
 var eDenLight = new THREE.PointLight(0xFF4400, 1.5, 14);
 scene.add(eDenLight);
+
+// 3 roaming psychedelic point lights
+var psyLights = [];
+for (var _pl = 0; _pl < 3; _pl++) {
+  var _plight = new THREE.PointLight(0xFFFFFF, 1.8, 30);
+  scene.add(_plight);
+  psyLights.push(_plight);
+}
 
 function resize() {
   var w = window.innerWidth, h = window.innerHeight;
@@ -631,24 +640,24 @@ function updatePlayer(dt) {
   } else {
     if (G.dodgeCd > 0) G.dodgeCd -= dt;
 
-    // Rotate: A/D keys + mouse
+    // Rotate: A/D or Left/Right arrow keys + mouse
     player.facing -= mdx * 0.003;
     mdx = 0;
-    if (KB.KeyA) player.facing -= ROT_SPD * dt;
-    if (KB.KeyD) player.facing += ROT_SPD * dt;
+    if (KB.KeyA||KB.ArrowLeft)  player.facing -= ROT_SPD * dt;
+    if (KB.KeyD||KB.ArrowRight) player.facing += ROT_SPD * dt;
 
     // Stamina
-    var sprint = (KB.ShiftLeft||KB.ShiftRight) && (KB.KeyW||KB.KeyS);
+    var sprint = (KB.ShiftLeft||KB.ShiftRight) && (KB.KeyW||KB.KeyS||KB.ArrowUp||KB.ArrowDown);
     if (sprint) player.sp = Math.max(0, player.sp - 28*dt);
     else        player.sp = Math.min(player.maxSp, player.sp + 16*dt);
 
     var spd = (sprint && player.sp>5) ? cls.spd*1.65 :
               player.holdingBone ? cls.spd*0.68 : cls.spd;
 
-    // Move: W forward, S backward (slower)
+    // Move: W/Up forward, S/Down backward (slower)
     var fw = 0;
-    if (KB.KeyW) fw = 1;
-    if (KB.KeyS) fw = -0.65;
+    if (KB.KeyW||KB.ArrowUp)   fw = 1;
+    if (KB.KeyS||KB.ArrowDown) fw = -0.65;
 
     if (fw !== 0) {
       var nx = player.pos.x + Math.sin(player.facing) * fw * spd * dt;
@@ -682,7 +691,7 @@ function updatePlayer(dt) {
   player.mesh.rotation.y = player.facing;
 
   // Walk animation
-  var fw2 = (KB.KeyW ? 1 : 0) + (KB.KeyS ? 1 : 0);
+  var fw2 = (KB.KeyW||KB.ArrowUp ? 1 : 0) + (KB.KeyS||KB.ArrowDown ? 1 : 0);
   if (fw2 !== 0 || G.dodgeT > 0) {
     player.mesh.userData.wt += dt * 9;
     var wt = player.mesh.userData.wt;
@@ -1895,6 +1904,28 @@ function loop(t) {
 
   updateHUD();
   drawMinimap();
+
+  // Psychedelic sky/fog cycling
+  var skyH = (t * 0.00004) % 1;
+  var skyCol = new THREE.Color().setHSL(skyH, 0.85, 0.55);
+  renderer.setClearColor(skyCol);
+  scene.fog.color.copy(skyCol);
+
+  // Roaming rainbow point lights
+  for (var _pi = 0; _pi < psyLights.length; _pi++) {
+    var _ang = t * 0.0005 + _pi * (Math.PI * 2 / 3);
+    psyLights[_pi].position.set(Math.sin(_ang) * 22, 4, Math.cos(_ang) * 22);
+    psyLights[_pi].color.setHSL((_ang / (Math.PI * 2)) % 1, 1.0, 0.55);
+  }
+
+  // Pulse bone emissive
+  for (var _bi = 0; _bi < G.bones.length; _bi++) {
+    var _bm = G.bones[_bi].mesh;
+    if (_bm && _bm.material) {
+      _bm.material.emissiveIntensity = 0.4 + Math.sin(t * 0.005 + _bi) * 0.4;
+    }
+  }
+
   renderer.render(scene,cam);
 }
 
@@ -1903,12 +1934,17 @@ function loop(t) {
 // ─────────────────────────────────────────────
 document.addEventListener('keydown',function(e){
   KB[e.code]=true;
+  if(e.code==='ArrowUp'||e.code==='ArrowDown'||e.code==='ArrowLeft'||e.code==='ArrowRight') e.preventDefault();
   if(!G.started||G.dead)return;
   if(e.code==='KeyE') tryPickup();
   if(e.code==='Space'){e.preventDefault(); tryDodge();}
   if(e.code==='KeyQ') tryGrowl();
+  if(e.code==='KeyF'&&!G.chargeHeld){startCharge();}
 });
-document.addEventListener('keyup',function(e){KB[e.code]=false;});
+document.addEventListener('keyup',function(e){
+  KB[e.code]=false;
+  if(e.code==='KeyF'&&G.started&&!G.dead) releaseCharge();
+});
 
 document.addEventListener('mousedown',function(e){
   if(!G.started||G.dead)return;
@@ -1944,7 +1980,7 @@ function startGame() {
   G.started=true;
   G.alphaBarkT = 8.0;
   canvas.requestPointerLock();
-  showMsg('Find bones! Bring them to your yellow den!',4);
+  showMsg('WASD/Arrows=Move  F=Bite  Space=Dodge  E=Pick up  Q=Growl',5);
 }
 
 // ─────────────────────────────────────────────
