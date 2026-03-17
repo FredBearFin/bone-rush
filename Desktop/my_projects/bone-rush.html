@@ -103,11 +103,11 @@ body { background: #000; overflow: hidden; font-family: 'Courier New', monospace
   <p>Drop your bone to fight. Enemy dogs carry bones to THEIR den.</p>
   <div style="margin-top:18px;font-size:15px;color:#ffe000;">CHOOSE YOUR DOG</div>
   <div class="class-grid" id="classGrid">
-    <button class="cbtn sel" data-c="mutt">MUTT<small>Balanced</small></button>
-    <button class="cbtn" data-c="bulldog">BULLDOG<small>Tank &bull; Slow</small></button>
-    <button class="cbtn" data-c="greyhound">GREYHOUND<small>Speed &bull; Fragile</small></button>
-    <button class="cbtn" data-c="husky">HUSKY<small>Tough Carrier</small></button>
-    <button class="cbtn" data-c="pitbull">PITBULL<small>Brawler</small></button>
+    <button class="cbtn sel" id="btn-mutt"      onclick="selectClass('mutt')"      >MUTT<small>Balanced</small></button>
+    <button class="cbtn"     id="btn-bulldog"   onclick="selectClass('bulldog')"   >BULLDOG<small>Tank &bull; Slow</small></button>
+    <button class="cbtn"     id="btn-greyhound" onclick="selectClass('greyhound')" >GREYHOUND<small>Speed &bull; Fragile</small></button>
+    <button class="cbtn"     id="btn-husky"     onclick="selectClass('husky')"     >HUSKY<small>Tough Carrier</small></button>
+    <button class="cbtn"     id="btn-pitbull"   onclick="selectClass('pitbull')"   >PITBULL<small>Brawler</small></button>
   </div>
   <button class="cbtn" id="startBtn">START GAME</button>
   <div class="sub">
@@ -999,13 +999,12 @@ requestAnimationFrame(loop);
 // ──────────────────────────────────────────────
 // START SCREEN
 // ──────────────────────────────────────────────
-document.querySelectorAll('.cbtn[data-c]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.cbtn[data-c]').forEach(b=>b.classList.remove('sel'));
-    btn.classList.add('sel');
-    G.selectedClass=btn.dataset.c;
+function selectClass(c){
+  ['mutt','bulldog','greyhound','husky','pitbull'].forEach(k=>{
+    document.getElementById('btn-'+k).classList.toggle('sel', k===c);
   });
-});
+  G.selectedClass=c;
+}
 document.getElementById('startBtn').addEventListener('click',()=>{
   document.getElementById('startScreen').style.display='none';
   G.started=true;
