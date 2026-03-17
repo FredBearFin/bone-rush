@@ -6,881 +6,884 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
-#gameCanvas { display:block; width:100vw; height:100vh; image-rendering:pixelated; }
+#c { display:block; width:100vw; height:100vh; image-rendering:pixelated; }
 
-#hud {
+/* HUD */
+#hud { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+#tl { position:absolute; top:14px; left:14px; }
+#tr { position:absolute; top:14px; right:14px; text-align:right; }
+#bc { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); text-align:center; }
+.lbl { font-size:10px; color:#bbb; letter-spacing:2px; text-transform:uppercase; }
+.bar { width:148px; height:9px; background:#1a1a1a; border:1px solid #444; margin:2px 0 6px; }
+.bfill { height:100%; }
+#hf { background:#d93333; }
+#sf { background:#33cc55; }
+#dn { font-size:13px; color:#66aaff; letter-spacing:1px; margin-bottom:5px; }
+#sc { font-size:22px; color:#ffe000; text-shadow:2px 2px #000; }
+#wv { font-size:12px; color:#ff8888; margin-top:3px; }
+#msg { font-size:16px; color:#fff; text-shadow:2px 2px #000; margin-bottom:6px; min-height:22px; letter-spacing:1px; }
+#hint { font-size:11px; color:#666; letter-spacing:1px; }
+#bn { font-size:13px; color:#ffe000; min-height:18px; margin-bottom:4px; }
+#mm { position:absolute; bottom:14px; right:14px; border:2px solid #555; }
+
+/* SCREENS */
+.scr {
   position:fixed; top:0; left:0; width:100%; height:100%;
-  pointer-events:none; user-select:none;
+  background:rgba(0,0,0,0.9); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; color:#fff; z-index:10;
 }
-.hp { position:absolute; top:16px; left:16px; }
-.lbl { font-size:11px; color:#aaa; letter-spacing:2px; text-transform:uppercase; }
-.bar { width:150px; height:10px; background:#222; border:1px solid #444; margin:3px 0 7px; }
-.bar-fill { height:100%; transition:width 0.1s; }
-#hpFill { background:#cc2222; }
-#spFill { background:#22cc55; }
-#dogName { font-size:14px; color:#6af; letter-spacing:1px; margin-bottom:6px; }
-
-.score-panel { position:absolute; top:16px; right:16px; text-align:right; }
-#scoreEl { font-size:22px; color:#ffe000; text-shadow:2px 2px #000; }
-#waveEl { font-size:13px; color:#f88; margin-top:4px; }
-
-#msgEl {
-  position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
-  font-size:17px; color:#fff; text-shadow:2px 2px #000; text-align:center;
-  min-height:24px; letter-spacing:1px;
-}
-#hintEl {
-  position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
-  font-size:12px; color:#666; letter-spacing:1px; text-align:center;
-}
-#boneEl { font-size:14px; color:#ffe000; margin-top:4px; min-height:20px; }
-
-#minimap {
-  position:absolute; bottom:16px; right:16px;
-  border:2px solid #444;
-}
-
-/* screens */
-.screen {
-  position:fixed; top:0; left:0; width:100%; height:100%;
-  background:rgba(0,0,0,0.88);
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  color:#fff; z-index:10; pointer-events:auto;
-}
-.screen h1 { font-size:44px; margin-bottom:6px; }
-.note { font-size:13px; color:#777; margin:3px 0; }
-.class-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:14px 0; max-width:560px; }
+.scr h1 { font-size:46px; margin-bottom:6px; }
+.note { font-size:13px; color:#666; margin:3px 0; }
+.crow { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:14px 0; max-width:580px; }
 .cb {
-  padding:10px 18px; min-width:100px; text-align:center;
-  background:#111; border:2px solid #444; color:#aaa;
-  font-family:'Courier New',monospace; font-size:12px;
-  cursor:pointer; text-transform:uppercase; letter-spacing:1px;
+  padding:10px 16px; min-width:100px; background:#0d0d0d; border:2px solid #444;
+  color:#aaa; font-family:'Courier New',monospace; font-size:12px;
+  cursor:pointer; text-transform:uppercase; letter-spacing:1px; text-align:center;
 }
 .cb:hover { border-color:#ffe000; color:#ffe000; }
-.cb.on { border-color:#e03; color:#e03; background:#200; }
-.cb small { display:block; font-size:10px; color:#555; margin-top:3px; }
+.cb.on { border-color:#e03; color:#e03; background:#1a0000; }
+.cb small { display:block; font-size:10px; color:#555; margin-top:2px; }
 .cb.on small { color:#844; }
-#startBtn {
-  font-size:18px; padding:14px 48px;
-  border-color:#ffe000; color:#ffe000; background:#111; margin-top:8px;
-}
-.controls-note { font-size:12px; color:#555; text-align:center; margin-top:14px; line-height:2; }
-#deathScore { font-size:18px; color:#faa; margin:14px 0; }
+#sb { font-size:18px; padding:13px 46px; border-color:#ffe000; color:#ffe000; margin-top:8px; }
+.ctrl { font-size:12px; color:#444; text-align:center; margin-top:12px; line-height:2; }
 </style>
 </head>
 <body>
 
-<canvas id="gameCanvas"></canvas>
+<canvas id="c"></canvas>
 
 <div id="hud">
-  <div class="hp">
-    <div id="dogName">MUTT</div>
+  <div id="tl">
+    <div id="dn">MUTT</div>
     <div class="lbl">HEALTH</div>
-    <div class="bar"><div class="bar-fill" id="hpFill" style="width:100%"></div></div>
+    <div class="bar"><div class="bfill" id="hf" style="width:100%"></div></div>
     <div class="lbl">STAMINA</div>
-    <div class="bar"><div class="bar-fill" id="spFill" style="width:100%"></div></div>
+    <div class="bar"><div class="bfill" id="sf" style="width:100%"></div></div>
   </div>
-  <div class="score-panel">
-    <div id="scoreEl">BONES: 0</div>
-    <div id="waveEl">WAVE 1</div>
+  <div id="tr">
+    <div id="sc">BONES: 0</div>
+    <div id="wv">WAVE 1</div>
   </div>
-  <div id="msgEl"></div>
-  <div id="hintEl">
-    <div id="boneEl"></div>
-    WASD: Move &nbsp;|&nbsp; MOUSE: Rotate Cam &nbsp;|&nbsp; E: Grab/Drop &nbsp;|&nbsp; CLICK: Bite &nbsp;|&nbsp; SHIFT: Sprint
+  <div id="bc">
+    <div id="bn"></div>
+    <div id="msg"></div>
+    <div id="hint">A/D or MOUSE: Turn &nbsp;|&nbsp; W/S: Move &nbsp;|&nbsp; E: Grab/Drop &nbsp;|&nbsp; CLICK: Bite &nbsp;|&nbsp; SHIFT: Sprint</div>
   </div>
-  <canvas id="minimap" width="130" height="130"></canvas>
+  <canvas id="mm" width="130" height="130"></canvas>
 </div>
 
 <!-- START SCREEN -->
-<div class="screen" id="startScreen">
-  <h1 style="color:#ffe000;text-shadow:3px 3px #800">&#x1F9B4; BONE RUSH &#x1F9B4;</h1>
+<div class="scr" id="ss">
+  <h1 style="color:#ffe000;text-shadow:3px 3px #960">&#x1F9B4; BONE RUSH &#x1F9B4;</h1>
   <p class="note">Collect bones — bring them back to your glowing yellow den.</p>
-  <p class="note">Drop your bone to fight. Enemy dogs carry bones to their red den.</p>
-  <div style="margin-top:16px;font-size:14px;color:#ffe000">PICK YOUR DOG</div>
-  <div class="class-row">
-    <button class="cb on" id="b-mutt"      onclick="pickClass('mutt')">MUTT<small>Balanced</small></button>
-    <button class="cb"    id="b-bulldog"   onclick="pickClass('bulldog')">BULLDOG<small>Tanky &bull; Slow</small></button>
-    <button class="cb"    id="b-greyhound" onclick="pickClass('greyhound')">GREYHOUND<small>Fast &bull; Fragile</small></button>
-    <button class="cb"    id="b-husky"     onclick="pickClass('husky')">HUSKY<small>Tough Carrier</small></button>
-    <button class="cb"    id="b-pitbull"   onclick="pickClass('pitbull')">PITBULL<small>Brawler</small></button>
+  <p class="note">Enemy dogs carry bones to their red den. Drop bone to fight!</p>
+  <div style="margin-top:16px;font-size:13px;color:#ffe000">PICK YOUR DOG</div>
+  <div class="crow">
+    <button class="cb on" id="b-mutt"      onclick="pick('mutt')">MUTT<small>Balanced</small></button>
+    <button class="cb"    id="b-bulldog"   onclick="pick('bulldog')">BULLDOG<small>Tank &bull; Slow</small></button>
+    <button class="cb"    id="b-greyhound" onclick="pick('greyhound')">GREYHOUND<small>Fast &bull; Fragile</small></button>
+    <button class="cb"    id="b-husky"     onclick="pick('husky')">HUSKY<small>Tough</small></button>
+    <button class="cb"    id="b-pitbull"   onclick="pick('pitbull')">PITBULL<small>Brawler</small></button>
   </div>
-  <button class="cb" id="startBtn" onclick="startGame()">START GAME</button>
-  <div class="controls-note">
-    WASD: Move &nbsp;&bull;&nbsp; Mouse: Rotate Camera &nbsp;&bull;&nbsp; E: Pick Up / Drop Bone<br>
-    Left Click: Bite attack &nbsp;&bull;&nbsp; Shift: Sprint<br>
-    You <b>cannot fight</b> while holding a bone — neither can enemies!
+  <button class="cb" id="sb" onclick="startGame()">START GAME</button>
+  <div class="ctrl">
+    A / D or Mouse: Turn &nbsp;&bull;&nbsp; W / S: Move &nbsp;&bull;&nbsp; E: Pick Up / Drop<br>
+    Left Click: Bite &nbsp;&bull;&nbsp; Shift: Sprint &nbsp;&bull;&nbsp; Walk into yellow den to score
   </div>
 </div>
 
 <!-- DEATH SCREEN -->
-<div class="screen" id="deathScreen" style="display:none;background:rgba(60,0,0,0.92)">
+<div class="scr" id="ds" style="display:none; background:rgba(50,0,0,0.93)">
   <h1 style="color:#f44">YOU GOT GOT</h1>
-  <div id="deathScore"></div>
-  <button class="cb" onclick="location.reload()" style="font-size:18px;padding:12px 36px;border-color:#f44;color:#f44;margin-top:12px">RETRY</button>
+  <div id="dscore" style="font-size:18px;color:#faa;margin:12px 0"></div>
+  <button class="cb" onclick="location.reload()" style="font-size:17px;padding:12px 36px;border-color:#f44;color:#f44;margin-top:10px">RETRY</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script>
+
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
-var W = 80;           // world half-size
-var BASE_R = 4.5;     // player den radius
-var RS = 0.5;         // render scale (PS2 low-res)
+var W = 80;
+var BASE_R = 5;
+var RS = 0.6;
+var CAM_DIST = 10;
+var CAM_H = 5.5;
+var ROT_SPD = 2.6;
 
-var PCLASSES = {
-  mutt:      {name:'MUTT',      hp:100, spd:5.5, dmg:15, bite:2.8, col:0x8B5C1A},
-  bulldog:   {name:'BULLDOG',   hp:180, spd:3.5, dmg:28, bite:2.5, col:0xCC7744},
-  greyhound: {name:'GREYHOUND', hp:65,  spd:9.0, dmg:10, bite:3.0, col:0xBBBBBB},
-  husky:     {name:'HUSKY',     hp:115, spd:5.5, dmg:18, bite:2.8, col:0x7090AA},
-  pitbull:   {name:'PITBULL',   hp:120, spd:6.5, dmg:32, bite:2.6, col:0xCC6633},
+var PC = {
+  mutt:      {n:'MUTT',      hp:100,spd:5.5,dmg:16,bite:2.8,col:0xAA7740,cc:0xDD4422},
+  bulldog:   {n:'BULLDOG',   hp:185,spd:3.4,dmg:28,bite:2.5,col:0xCC8850,cc:0x442200},
+  greyhound: {n:'GREYHOUND', hp:65, spd:9.2,dmg:10,bite:3.0,col:0xCCCCCC,cc:0x6688AA},
+  husky:     {n:'HUSKY',     hp:120,spd:5.5,dmg:18,bite:2.8,col:0x8899BB,cc:0xFFFFFF},
+  pitbull:   {n:'PITBULL',   hp:125,spd:6.4,dmg:33,bite:2.6,col:0xBB6633,cc:0xFF2200},
 };
-var ETYPES = {
-  stray:    {name:'STRAY',   hp:55,  spd:3.2, dmg:10, agg:0.25, sc:0.85, col:0x777060},
-  swift:    {name:'SWIFT',   hp:48,  spd:7.5, dmg:8,  agg:0.15, sc:0.9,  col:0xAAAAAA},
-  bulldog:  {name:'BULLDOG', hp:140, spd:2.8, dmg:22, agg:0.75, sc:1.1,  col:0xAA7744},
-  pitbull:  {name:'PITBULL', hp:105, spd:5.8, dmg:30, agg:0.90, sc:1.0,  col:0xCC5533},
-  alpha:    {name:'ALPHA',   hp:260, spd:4.2, dmg:40, agg:1.0,  sc:1.45, col:0x880000},
+var ET = {
+  stray:   {n:'STRAY',   hp:55, spd:3.2,dmg:10,agg:0.25,sc:0.85,col:0x887766,cc:0x444444},
+  swift:   {n:'SWIFT',   hp:48, spd:7.8,dmg:8, agg:0.15,sc:0.9, col:0xBBBBBB,cc:0x888888},
+  bulldog: {n:'BULLDOG', hp:145,spd:2.8,dmg:22,agg:0.75,sc:1.1, col:0xAA7744,cc:0x442200},
+  pitbull: {n:'PITBULL', hp:110,spd:5.8,dmg:30,agg:0.90,sc:1.0, col:0xCC5533,cc:0xFF2200},
+  alpha:   {n:'ALPHA',   hp:265,spd:4.2,dmg:40,agg:1.0, sc:1.5, col:0x990000,cc:0xFF0000},
 };
 
 // ─────────────────────────────────────────────
-// THREE SETUP
+// TERRAIN HEIGHT FUNCTION
 // ─────────────────────────────────────────────
-var canvas = document.getElementById('gameCanvas');
+function th(x, z) {
+  var r = Math.sqrt(x*x + z*z);
+  var f = Math.max(0, Math.min(1, (r - 9) / 22));
+  var h = Math.sin(x*0.11)*Math.cos(z*0.095)*2.8
+        + Math.sin(x*0.21+z*0.17)*1.4
+        + Math.sin(x*0.065-z*0.085)*2.2;
+  return h * f;
+}
+
+function htc(h) { // height to vertex color
+  var t = Math.max(0, Math.min(1, (h + 2) / 5));
+  // valley=dark green, hilltop=bright lime green
+  return [0.18+t*0.20, 0.44+t*0.24, 0.10+t*0.06];
+}
+
+// ─────────────────────────────────────────────
+// THREE.JS INIT
+// ─────────────────────────────────────────────
+var canvas = document.getElementById('c');
 var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:false});
-renderer.setClearColor(0x87CEEB);
-renderer.shadowMap.enabled = false;
+renderer.setClearColor(0x5BBFEE);
 
 var scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x87CEEB, 20, 70);
+scene.fog = new THREE.Fog(0x5BBFEE, 22, 75);
 
 var cam = new THREE.PerspectiveCamera(65, 1, 0.1, 120);
+cam.position.set(0, CAM_H, -CAM_DIST);
+cam.lookAt(0, 0, 0);
+
+// Lights
+scene.add(new THREE.HemisphereLight(0x88CCFF, 0x335522, 0.7));
+var sun = new THREE.DirectionalLight(0xFFEECC, 0.9);
+sun.position.set(20, 40, 15);
+scene.add(sun);
+var fill = new THREE.DirectionalLight(0xAADDFF, 0.2);
+fill.position.set(-15, 10, -10);
+scene.add(fill);
+var denLight = new THREE.PointLight(0xFFEE00, 1.5, 14);
+denLight.position.set(0, 2, 0);
+scene.add(denLight);
+var eDenLight = new THREE.PointLight(0xFF4400, 1.5, 14);
+scene.add(eDenLight);
 
 function resize() {
   var w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(Math.floor(w*RS), Math.floor(h*RS), false);
-  canvas.style.width = w + 'px';
-  canvas.style.height = h + 'px';
-  cam.aspect = w / h;
-  cam.updateProjectionMatrix();
+  canvas.style.width = w+'px'; canvas.style.height = h+'px';
+  cam.aspect = w/h; cam.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
 resize();
-
-// Lights (added once, reused)
-var ambLight = new THREE.AmbientLight(0x999999);
-var sunLight = new THREE.DirectionalLight(0xFFFFCC, 0.8);
-sunLight.position.set(15, 30, 10);
-var fillLight = new THREE.DirectionalLight(0xAABBFF, 0.2);
-fillLight.position.set(-10, 10, -10);
-scene.add(ambLight, sunLight, fillLight);
 
 // ─────────────────────────────────────────────
 // GAME STATE
 // ─────────────────────────────────────────────
 var G = {
   started:false, dead:false,
-  score:0, wave:1,
-  waveTimer:0, waveLen:60,
+  score:0, wave:1, waveTimer:0, waveLen:60,
   gameTime:0,
-  bones:[], enemies:[], obstacles:[], parts:[],
-  eDen:{x:30, z:30},
+  bones:[], enemies:[], obs:[], parts:[],
+  eDen:{x:0,z:0},
   spawnT:0, spawnInterval:8, maxE:7,
   msgTimer:0,
   biteT:0, biteCd:0.55,
   iframes:0,
-  comboT:0, combo:0,
-  selectedClass:'mutt',
+  combo:0, comboT:0,
+  cls:'mutt',
 };
 
 var player = {
   pos: new THREE.Vector3(0,0,0),
-  facing: 0,   // yaw the dog faces
+  facing: 0,
   hp:100, maxHp:100,
   sp:100, maxSp:100,
   holdingBone:null,
   mesh:null,
-  cls: PCLASSES.mutt,
+  cls: PC.mutt,
 };
 
-// Camera orbit
-var camYaw = Math.PI;   // start behind player
-var camSmooth = new THREE.Vector3(0, 5, 8);
-var CAM_DIST = 9;
-var CAM_H = 5;
-
 var KB = {};
-var mouseDX = 0;
+var mdx = 0; // mouse delta X this frame
 
 // ─────────────────────────────────────────────
-// HELPERS
+// MESH HELPERS
 // ─────────────────────────────────────────────
-function lmat(c, em) { return new THREE.MeshLambertMaterial({color:c, emissive:em||0}); }
-function dk(c, f) { f=f||0.7; return (Math.round(((c>>16)&0xff)*f)<<16)|(Math.round(((c>>8)&0xff)*f)<<8)|Math.round((c&0xff)*f); }
-function rnd(a,b) { return a + Math.random()*(b-a); }
-function d2(ax,az,bx,bz) { var dx=ax-bx,dz=az-bz; return dx*dx+dz*dz; }
-function showMsg(t,s) { G.msgTimer=s||2; document.getElementById('msgEl').textContent=t; }
+function lm(col, em) { return new THREE.MeshLambertMaterial({color:col||0xffffff, emissive:em||0}); }
+function bm(col) { return new THREE.MeshBasicMaterial({color:col}); }
+function rnd(a,b) { return a+Math.random()*(b-a); }
+function d2sq(ax,az,bx,bz) { var dx=ax-bx,dz=az-bz; return dx*dx+dz*dz; }
 
 // ─────────────────────────────────────────────
-// MESH FACTORIES
+// DOG MESH FACTORY
 // ─────────────────────────────────────────────
-function makeDog(col, scale) {
-  scale = scale || 1;
+function mkDog(col, collarCol, sc) {
+  sc = sc||1;
   var g = new THREE.Group();
-  var m = lmat(col), md = lmat(dk(col)), me = lmat(dk(col, 0.55));
+  var m = lm(col);
+  var md = lm(darken(col, 0.72));
+  var me = lm(darken(col, 0.5));
 
-  // body
-  var body = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.5,1.2), m);
-  body.position.set(0, 0.5, 0); g.add(body);
+  // Body — wider on X, longer on Z
+  var body = new THREE.Mesh(new THREE.BoxGeometry(0.78,0.52,1.3), m);
+  body.position.set(0, 0.52, 0); g.add(body);
 
-  // neck
-  var neck = new THREE.Mesh(new THREE.BoxGeometry(0.35,0.3,0.3), m);
-  neck.position.set(0, 0.78, 0.45); g.add(neck);
+  // Neck
+  var neck = new THREE.Mesh(new THREE.BoxGeometry(0.38,0.32,0.34), m);
+  neck.position.set(0, 0.82, 0.52); g.add(neck);
 
-  // head
-  var head = new THREE.Mesh(new THREE.BoxGeometry(0.52,0.48,0.5), m);
-  head.position.set(0, 0.9, 0.72); g.add(head);
+  // Head
+  var head = new THREE.Mesh(new THREE.BoxGeometry(0.55,0.5,0.52), m);
+  head.position.set(0, 0.92, 0.78); g.add(head);
 
-  // snout
-  var snout = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.2,0.28), md);
-  snout.position.set(0, 0.8, 0.99); g.add(snout);
+  // Snout
+  var snout = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.22,0.3), md);
+  snout.position.set(0, 0.82, 1.06); g.add(snout);
 
-  // nose
-  var nose = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.09,0.05), lmat(0x111111));
-  nose.position.set(0, 0.86, 1.13); g.add(nose);
+  // Nose
+  var nose = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.1,0.06), lm(0x222222));
+  nose.position.set(0, 0.88, 1.21); g.add(nose);
 
-  // eyes
-  var eyeM = lmat(0x110000);
-  var el = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.04), eyeM);
-  el.position.set(-0.15, 0.96, 0.97); g.add(el);
-  var er = el.clone(); er.position.x = 0.15; g.add(er);
-
-  // ears
-  [-0.23, 0.23].forEach(function(x) {
-    var ear = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.2,0.06), me);
-    ear.position.set(x, 1.1, 0.68); g.add(ear);
+  // Eyes (glowing white + dark pupil)
+  [[-0.17,0.98,0.94],[0.17,0.98,0.94]].forEach(function(p) {
+    var white = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.05), lm(0xFFFFFF,0x333333));
+    white.position.set(p[0],p[1],p[2]); g.add(white);
+    var pupil = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.06,0.04), lm(0x111111));
+    pupil.position.set(p[0],p[1],p[2]+0.02); g.add(pupil);
   });
 
-  // legs (4)
+  // Ears
+  [[-0.25,1.13,0.72],[0.25,1.13,0.72]].forEach(function(p) {
+    var ear = new THREE.Mesh(new THREE.BoxGeometry(0.16,0.23,0.07), me);
+    ear.position.set(p[0],p[1],p[2]); g.add(ear);
+  });
+
+  // Collar (colorful!)
+  var collar = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.12,8), lm(collarCol||0xFF2200, 0x440000));
+  collar.position.set(0, 0.72, 0.5); g.add(collar);
+
+  // Collar tag
+  var tag = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.1,0.04), lm(0xFFD700, 0x664400));
+  tag.position.set(0, 0.62, 0.56); g.add(tag);
+
+  // Legs
   var legs = [];
-  [[-0.24,0.25,0.38],[0.24,0.25,0.38],[-0.24,0.25,-0.35],[0.24,0.25,-0.35]].forEach(function(p) {
-    var leg = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.48,0.18), md);
-    leg.position.set(p[0], p[1], p[2]); g.add(leg);
-    legs.push(leg);
+  [[-0.25,0.28,0.42],[0.25,0.28,0.42],[-0.25,0.28,-0.38],[0.25,0.28,-0.38]].forEach(function(p) {
+    var leg = new THREE.Mesh(new THREE.BoxGeometry(0.19,0.52,0.19), md);
+    leg.position.set(p[0],p[1],p[2]); g.add(leg); legs.push(leg);
+    // paw
+    var paw = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.1,0.24), me);
+    paw.position.set(p[0],0.03,p[2]+(p[2]>0?0.03:-0.03)); g.add(paw);
   });
   g.userData.legs = legs;
 
-  // tail
-  var tail = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.38,0.12), m);
-  tail.position.set(0, 0.75, -0.72); tail.rotation.x = 0.5; g.add(tail);
+  // Tail
+  var tail = new THREE.Mesh(new THREE.BoxGeometry(0.13,0.4,0.13), m);
+  tail.position.set(0,0.78,-0.76); tail.rotation.x=0.5; g.add(tail);
   g.userData.tail = tail;
 
-  // bone-in-mouth (hidden by default)
-  var bim = makeBone(0.5, false);
-  bim.position.set(0, 0.75, 1.18); bim.visible = false; g.add(bim);
+  // Bone-in-mouth
+  var bim = mkBone(0.5, false);
+  bim.position.set(0, 0.78, 1.22); bim.visible=false; g.add(bim);
   g.userData.bim = bim;
 
-  g.scale.setScalar(scale);
-  g.userData.walkT = 0;
+  g.scale.setScalar(sc);
+  g.userData.wt = 0;
   return g;
 }
 
-function makeBone(sc, golden) {
-  sc = sc || 1; golden = golden || false;
+function darken(c, f) {
+  f = f||0.7;
+  return (Math.round(((c>>16)&0xff)*f)<<16)|(Math.round(((c>>8)&0xff)*f)<<8)|Math.round((c&0xff)*f);
+}
+
+function mkBone(sc, golden) {
+  sc=sc||1;
   var g = new THREE.Group();
-  var mat = lmat(golden ? 0xFFD700 : 0xFFFAE0, golden ? 0x886600 : 0);
-  var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.52, 5), mat);
+  var col = golden ? 0xFFD700 : 0xFFFAE0;
+  var em  = golden ? 0x886600 : 0x222200;
+  var mat = lm(col, em);
+  var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.54,6), mat);
   shaft.rotation.z = Math.PI/2; g.add(shaft);
-  [[-0.31,0.11],[-0.31,-0.11],[0.31,0.11],[0.31,-0.11]].forEach(function(p) {
-    var b = new THREE.Mesh(new THREE.SphereGeometry(0.11,4,3), mat);
-    b.position.set(p[0], p[1], 0); g.add(b);
+  [[-0.33,0.12],[-0.33,-0.12],[0.33,0.12],[0.33,-0.12]].forEach(function(p) {
+    var b = new THREE.Mesh(new THREE.SphereGeometry(0.12,5,4), mat);
+    b.position.set(p[0],p[1],0); g.add(b);
   });
   g.scale.setScalar(sc);
   return g;
 }
 
-function makeTree(x, z) {
+function mkTree(x, z, variant) {
   var g = new THREE.Group();
-  var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.3,2,5), lmat(0x4A2C0A));
-  trunk.position.y = 1; g.add(trunk);
-  [[1.5,1.1,1.5,2.5],[1.0,0.85,1.0,3.2]].forEach(function(v) {
-    var leaf = new THREE.Mesh(new THREE.BoxGeometry(v[0],v[1],v[2]), lmat(0x1E7A1E));
-    leaf.position.y = v[3]; g.add(leaf);
+  // Trunk — varied heights
+  var th2 = rnd(1.8, 2.6);
+  var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18+Math.random()*0.1, 0.26+Math.random()*0.1, th2, 6), lm(0x5D3010));
+  trunk.position.y = th2/2; g.add(trunk);
+
+  // Foliage — richer colors
+  var leafCols = variant===1 ? [0xE67500, 0xCC5500] :
+                 variant===2 ? [0x1A8C1A, 0x0F6B0F] :
+                 [0x228B22, 0x1A6E1A, 0x2EAB2E];
+  [[1.7,1.3,1.7,th2+0.9],[1.2,0.95,1.2,th2+1.8],[0.8,0.75,0.8,th2+2.5]].forEach(function(v,i) {
+    var lc = leafCols[i%leafCols.length];
+    var leaf = new THREE.Mesh(new THREE.BoxGeometry(v[0],v[1],v[2]), lm(lc));
+    leaf.position.y=v[3]; leaf.rotation.y=Math.random()*Math.PI; g.add(leaf);
   });
-  g.position.set(x, 0, z);
+
+  g.position.set(x, th(x,z), z);
   return g;
 }
 
-function makeRock(x, z) {
+function mkRock(x, z) {
   var g = new THREE.Group();
-  [[0.85,0.55,0.7,0,0.27,0],[0.5,0.45,0.5,0.3,0.22,0.1],[0.4,0.38,0.5,-0.25,0.19,0.15]].forEach(function(v,i) {
-    var r = new THREE.Mesh(new THREE.BoxGeometry(v[0],v[1],v[2]), lmat(0x606060+i*0x0A0A0A));
-    r.position.set(v[3],v[4],v[5]); r.rotation.y = rnd(0, Math.PI); g.add(r);
+  var cols = [0x7A8B8B, 0x8B9B8B, 0x6A7A7A, 0x9B8B7A];
+  [[0.9,0.55,0.8,0],[0.55,0.48,0.55,0.3],[0.42,0.4,0.52,-0.24]].forEach(function(v,i) {
+    var r = new THREE.Mesh(new THREE.BoxGeometry(v[0],v[1],v[2]), lm(cols[i]));
+    r.position.set(v[3], v[1]/2-0.02, (i-1)*0.12);
+    r.rotation.y=Math.random()*Math.PI; g.add(r);
   });
-  g.position.set(x, 0, z);
+  var y0 = th(x,z);
+  g.position.set(x, y0, z);
   return g;
+}
+
+function mkFlower(x, z) {
+  var g = new THREE.Group();
+  var stemH = rnd(0.2,0.4);
+  var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,stemH,4), lm(0x22AA22));
+  stem.position.y = stemH/2; g.add(stem);
+  var petalCols = [0xFF4488, 0xFFEE00, 0xFF7722, 0xCC44FF, 0x44DDFF];
+  var pc = petalCols[Math.floor(Math.random()*petalCols.length)];
+  var head2 = new THREE.Mesh(new THREE.SphereGeometry(0.1+Math.random()*0.06, 5, 4), lm(pc, darken(pc,0.4)));
+  head2.position.y = stemH+0.1; g.add(head2);
+  g.position.set(x, th(x,z), z);
+  return g;
+}
+
+function mkMushroom(x, z) {
+  var g = new THREE.Group();
+  var stem2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,0.3,6), lm(0xEEDDCC));
+  stem2.position.y=0.15; g.add(stem2);
+  var cap = new THREE.Mesh(new THREE.SphereGeometry(0.22,6,5), lm(0xDD2200,0x441100));
+  cap.scale.y=0.55; cap.position.y=0.36; g.add(cap);
+  // spots
+  for(var i=0;i<3;i++) {
+    var s = new THREE.Mesh(new THREE.SphereGeometry(0.05,4,3), lm(0xFFFFFF));
+    var a2=rnd(0,Math.PI*2), r2=rnd(0.04,0.14);
+    s.position.set(Math.cos(a2)*r2,0.36+rnd(-0.05,0.08),Math.sin(a2)*r2); g.add(s);
+  }
+  g.position.set(x, th(x,z), z);
+  return g;
+}
+
+// ─────────────────────────────────────────────
+// TERRAIN MESH
+// ─────────────────────────────────────────────
+function buildTerrain() {
+  var segs = 48;
+  var size = W*2+20;
+  var positions=[], colors=[], indices=[];
+
+  for (var zi=0; zi<=segs; zi++) {
+    for (var xi=0; xi<=segs; xi++) {
+      var x2 = (xi/segs-0.5)*size;
+      var z2 = (zi/segs-0.5)*size;
+      var y2 = th(x2, z2);
+      positions.push(x2, y2, z2);
+      var c3 = htc(y2);
+      // Add slight warm variation
+      var warm = (Math.sin(x2*0.08+1)*0.5+0.5) * (Math.sin(z2*0.07+2)*0.5+0.5) * 0.08;
+      colors.push(c3[0]+warm, c3[1]+warm*0.3, c3[2]);
+    }
+  }
+  for (var zi=0; zi<segs; zi++) {
+    for (var xi=0; xi<segs; xi++) {
+      var a3=zi*(segs+1)+xi, b3=a3+1, c4=a3+(segs+1), d3=c4+1;
+      indices.push(a3,c4,b3, b3,c4,d3);
+    }
+  }
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+  geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors,3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  scene.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({vertexColors:true})));
 }
 
 // ─────────────────────────────────────────────
 // WORLD GENERATION
 // ─────────────────────────────────────────────
-var worldBuilt = false;
-var worldMeshes = [];
-
 function buildWorld() {
-  // Ground
-  var geo = new THREE.PlaneGeometry(W*2+20, W*2+20, 20, 20);
-  var posAttr = geo.attributes.position;
-  for (var i = 0; i < posAttr.count; i++) {
-    var px = posAttr.getX(i), pz = posAttr.getZ(i);
-    if (px*px + pz*pz > 100) posAttr.setY(i, rnd(-0.15,0.15));
-  }
-  geo.computeVertexNormals();
-  var ground = new THREE.Mesh(geo, lmat(0x4A7C3E));
-  ground.rotation.x = -Math.PI/2;
-  scene.add(ground);
+  buildTerrain();
 
-  // Player den
-  var denGeo = new THREE.CylinderGeometry(BASE_R, BASE_R, 0.07, 10);
-  var den = new THREE.Mesh(denGeo, lmat(0xFFE000, 0x998800));
-  den.position.y = 0.04; scene.add(den);
-  var denPole = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,3,6), lmat(0xFFE000, 0xAA9900));
-  denPole.position.y = 1.5; scene.add(denPole);
+  // Player den (glowing platform)
+  var dg = new THREE.CylinderGeometry(BASE_R, BASE_R, 0.15, 12);
+  var denMesh = new THREE.Mesh(dg, lm(0xFFE000, 0x999900));
+  denMesh.position.y = th(0,0)+0.04; scene.add(denMesh);
+  var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,3.2,6), lm(0xFFE000,0xAA8800));
+  pole.position.y = th(0,0)+1.6; scene.add(pole);
 
   // Enemy den
-  var ex = rnd(25,35) * (Math.random()>0.5?1:-1);
-  var ez = rnd(25,35) * (Math.random()>0.5?1:-1);
+  var ex = rnd(26,36)*(Math.random()>0.5?1:-1);
+  var ez = rnd(26,36)*(Math.random()>0.5?1:-1);
   G.eDen = {x:ex, z:ez};
-  var eDen = new THREE.Mesh(denGeo.clone(), lmat(0xFF3300, 0x881100));
-  eDen.position.set(ex, 0.04, ez); scene.add(eDen);
-  var ePole = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,3,6), lmat(0xFF3300,0xAA1100));
-  ePole.position.set(ex, 1.5, ez); scene.add(ePole);
+  var eDenMesh = new THREE.Mesh(dg.clone(), lm(0xFF4400, 0xAA1100));
+  eDenMesh.position.set(ex, th(ex,ez)+0.04, ez); scene.add(eDenMesh);
+  var epole = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,3.2,6), lm(0xFF4400,0xAA1100));
+  epole.position.set(ex, th(ex,ez)+1.6, ez); scene.add(epole);
+  eDenLight.position.set(ex, th(ex,ez)+3, ez);
 
-  // Obstacles
-  for (var i = 0; i < 45; i++) {
-    var ox, oz, tries = 0;
-    do {
-      ox = rnd(-W+6, W-6);
-      oz = rnd(-W+6, W-6);
-      tries++;
-    } while (tries < 30 && (ox*ox+oz*oz < 110 || d2(ox,oz,ex,ez) < 80));
-    var isTree = Math.random() > 0.38;
-    var mesh = isTree ? makeTree(ox,oz) : makeRock(ox,oz);
-    scene.add(mesh);
-    G.obstacles.push({x:ox, z:oz, r: isTree?0.9:1.0});
+  // Obstacles: trees, rocks, flowers, mushrooms
+  var placed = 0;
+  var attempts = 0;
+  while (placed < 55 && attempts < 500) {
+    attempts++;
+    var ox = rnd(-W+6, W-6);
+    var oz = rnd(-W+6, W-6);
+    if (ox*ox+oz*oz < 90) continue;
+    if (d2sq(ox,oz,ex,ez) < 64) continue;
+    if (nearObs(ox,oz,2)) continue;
+    var roll = Math.random();
+    var obj;
+    if (roll > 0.55) { obj = mkTree(ox,oz, Math.floor(rnd(0,3))); G.obs.push({x:ox,z:oz,r:1.0}); }
+    else             { obj = mkRock(ox,oz); G.obs.push({x:ox,z:oz,r:0.95}); }
+    scene.add(obj); placed++;
   }
 
-  // Border fence posts (visual only)
-  for (var a = 0; a < Math.PI*2; a += 0.22) {
-    var fp = new THREE.Mesh(new THREE.BoxGeometry(0.3,1.2,0.3), lmat(0x5C3317));
-    fp.position.set(Math.cos(a)*W, 0.6, Math.sin(a)*W);
-    scene.add(fp);
+  // Flowers everywhere (just visual, no collision)
+  for (var i=0; i<80; i++) {
+    var fx=rnd(-W+4,W-4), fz=rnd(-W+4,W-4);
+    scene.add(mkFlower(fx,fz));
+  }
+  // Mushrooms
+  for (var i=0; i<20; i++) {
+    var mx2=rnd(-W+4,W-4), mz2=rnd(-W+4,W-4);
+    if (mx2*mx2+mz2*mz2>100) scene.add(mkMushroom(mx2,mz2));
   }
 
   // Spawn initial bones
-  for (var b = 0; b < 18; b++) spawnBone();
-  worldBuilt = true;
+  for (var i=0; i<18; i++) spawnBone();
+}
+
+function nearObs(x,z,r) {
+  for(var i=0;i<G.obs.length;i++) {
+    var o=G.obs[i], dx=o.x-x, dz=o.z-z;
+    if(dx*dx+dz*dz<(o.r+r)*(o.r+r)) return true;
+  }
+  return false;
 }
 
 // ─────────────────────────────────────────────
 // BONES
 // ─────────────────────────────────────────────
 function spawnBone() {
-  var x, z, tries = 0;
-  do {
-    x = rnd(-W+6, W-6); z = rnd(-W+6, W-6); tries++;
-    if (tries > 60) break;
-  } while (x*x+z*z < 36 || nearObs(x,z,1.8));
-
-  var roll = Math.random();
-  var golden = roll > 0.94;
-  var big = !golden && roll > 0.80;
-  var sc = golden ? 1.35 : big ? 1.1 : 0.75;
-
-  var mesh = makeBone(sc, golden);
-  mesh.position.set(x, 0.3, z);
+  var x,z,tries=0;
+  do { x=rnd(-W+6,W-6); z=rnd(-W+6,W-6); tries++; }
+  while(tries<60 && (x*x+z*z<36||nearObs(x,z,1.8)));
+  var roll=Math.random();
+  var golden=roll>0.94, big=!golden&&roll>0.80;
+  var sc=golden?1.4:big?1.15:0.8;
+  var mesh=mkBone(sc,golden);
+  var y0=th(x,z)+0.35;
+  mesh.position.set(x,y0,z);
   scene.add(mesh);
-
-  var bone = {
-    mesh: mesh,
-    pos: new THREE.Vector3(x, 0.3, z),
-    value: golden ? 5 : big ? 3 : 1,
-    golden: golden, big: big,
-    owner: null,
-    bobT: rnd(0, 6.28)
-  };
+  var bone={mesh:mesh,pos:new THREE.Vector3(x,y0,z),value:golden?5:big?3:1,golden:golden,big:big,owner:null,bt:rnd(0,6.28)};
   G.bones.push(bone);
   return bone;
 }
 
-function nearObs(x, z, r) {
-  for (var i = 0; i < G.obstacles.length; i++) {
-    var o = G.obstacles[i];
-    var dx = o.x-x, dz = o.z-z;
-    if (dx*dx+dz*dz < (o.r+r)*(o.r+r)) return true;
-  }
-  return false;
-}
-
-function dropBoneToGround(bone, px, pz) {
-  bone.pos.set(px, 0.3, pz);
+function boneToGround(bone, x, z) {
+  bone.pos.set(x, th(x,z)+0.35, z);
   bone.mesh.position.copy(bone.pos);
-  bone.mesh.visible = true;
-  bone.owner = null;
+  bone.mesh.visible=true;
+  bone.owner=null;
 }
 
 // ─────────────────────────────────────────────
-// PLAYER
+// PLAYER INIT
 // ─────────────────────────────────────────────
 function initPlayer() {
-  var cls = PCLASSES[G.selectedClass];
+  var cls = PC[G.cls];
   player.cls = cls;
   player.hp = cls.hp; player.maxHp = cls.hp;
   player.sp = 100; player.maxSp = 100;
-  player.pos.set(0, 0, 0);
+  player.pos.set(0,0,0);
   player.facing = 0;
-  if (player.mesh) { scene.remove(player.mesh); }
-  player.mesh = makeDog(cls.col);
+  if (player.mesh) scene.remove(player.mesh);
+  player.mesh = mkDog(cls.col, cls.cc);
   scene.add(player.mesh);
-  document.getElementById('dogName').textContent = cls.name;
+  document.getElementById('dn').textContent = cls.n;
 }
 
+// ─────────────────────────────────────────────
+// PLAYER UPDATE — TANK CONTROLS
+// ─────────────────────────────────────────────
 function updatePlayer(dt) {
   var cls = player.cls;
-  var sprinting = (KB.ShiftLeft || KB.ShiftRight);
+
+  // Rotate: A/D keys + mouse
+  player.facing -= mdx * 0.003;
+  mdx = 0;
+  if (KB.KeyA) player.facing -= ROT_SPD * dt;
+  if (KB.KeyD) player.facing += ROT_SPD * dt;
 
   // Stamina
-  var isMoving = KB.KeyW || KB.KeyS || KB.KeyA || KB.KeyD;
-  if (sprinting && isMoving) player.sp = Math.max(0, player.sp - 28*dt);
-  else player.sp = Math.min(player.maxSp, player.sp + 18*dt);
+  var sprint = (KB.ShiftLeft||KB.ShiftRight) && (KB.KeyW||KB.KeyS);
+  if (sprint) player.sp = Math.max(0, player.sp - 28*dt);
+  else        player.sp = Math.min(player.maxSp, player.sp + 16*dt);
 
-  var spd = (sprinting && player.sp > 5) ? cls.spd * 1.65 :
-            player.holdingBone ? cls.spd * 0.68 : cls.spd;
+  var spd = (sprint && player.sp>5) ? cls.spd*1.65 :
+            player.holdingBone ? cls.spd*0.68 : cls.spd;
 
-  // Move relative to camera yaw
-  var mx = 0, mz = 0;
-  if (KB.KeyW) { mx -= Math.sin(camYaw); mz -= Math.cos(camYaw); }
-  if (KB.KeyS) { mx += Math.sin(camYaw); mz += Math.cos(camYaw); }
-  if (KB.KeyA) { mx -= Math.cos(camYaw); mz += Math.sin(camYaw); }
-  if (KB.KeyD) { mx += Math.cos(camYaw); mz -= Math.sin(camYaw); }
+  // Move: W forward, S backward (slower)
+  var fw = 0;
+  if (KB.KeyW) fw = 1;
+  if (KB.KeyS) fw = -0.65;
 
-  var ml = Math.sqrt(mx*mx + mz*mz);
-  if (ml > 0) { mx /= ml; mz /= ml; }
+  if (fw !== 0) {
+    var nx = player.pos.x + Math.sin(player.facing) * fw * spd * dt;
+    var nz = player.pos.z + Math.cos(player.facing) * fw * spd * dt;
 
-  // Apply movement
-  var nx = player.pos.x + mx*spd*dt;
-  var nz = player.pos.z + mz*spd*dt;
+    // Bounds
+    nx = Math.max(-W+1, Math.min(W-1, nx));
+    nz = Math.max(-W+1, Math.min(W-1, nz));
 
-  // World bounds
-  nx = Math.max(-W+1, Math.min(W-1, nx));
-  nz = Math.max(-W+1, Math.min(W-1, nz));
-
-  // Obstacle push-out
-  for (var i = 0; i < G.obstacles.length; i++) {
-    var o = G.obstacles[i];
-    var dx = nx - o.x, dz2 = nz - o.z;
-    var dist = Math.sqrt(dx*dx + dz2*dz2);
-    var minD = o.r + 0.5;
-    if (dist < minD && dist > 0) {
-      nx = o.x + (dx/dist)*minD;
-      nz = o.z + (dz2/dist)*minD;
+    // Obstacle push-out
+    for (var i=0; i<G.obs.length; i++) {
+      var o=G.obs[i], dx2=nx-o.x, dz2=nz-o.z;
+      var dd=Math.sqrt(dx2*dx2+dz2*dz2), md2=o.r+0.52;
+      if(dd<md2&&dd>0.001){nx=o.x+(dx2/dd)*md2; nz=o.z+(dz2/dd)*md2;}
     }
+    player.pos.x = nx;
+    player.pos.z = nz;
   }
 
-  player.pos.x = nx;
-  player.pos.z = nz;
-  player.pos.y = 0;
+  // Stick to terrain
+  player.pos.y = th(player.pos.x, player.pos.z);
 
-  // Rotate dog to face movement direction
-  if (ml > 0) {
-    var targetFacing = Math.atan2(-mx, mz);
-    // Smooth rotation
-    var da = targetFacing - player.facing;
-    while (da > Math.PI) da -= Math.PI*2;
-    while (da < -Math.PI) da += Math.PI*2;
-    player.facing += da * Math.min(1, 12*dt);
-  }
-
-  // Animate dog mesh
+  // Mesh
   player.mesh.position.copy(player.pos);
   player.mesh.rotation.y = player.facing;
 
-  if (ml > 0) {
-    player.mesh.userData.walkT += dt * 9;
-    var wt = player.mesh.userData.walkT;
+  // Walk animation
+  if (fw !== 0) {
+    player.mesh.userData.wt += dt * 9;
+    var wt = player.mesh.userData.wt;
     var legs = player.mesh.userData.legs;
-    legs[0].rotation.x = Math.sin(wt) * 0.5;
-    legs[1].rotation.x = Math.sin(wt + Math.PI) * 0.5;
-    legs[2].rotation.x = Math.sin(wt + Math.PI) * 0.5;
-    legs[3].rotation.x = Math.sin(wt) * 0.5;
-    player.mesh.userData.tail.rotation.x = 0.45 + Math.sin(wt*1.3)*0.25;
+    legs[0].rotation.x = Math.sin(wt)*0.55;
+    legs[1].rotation.x = Math.sin(wt+Math.PI)*0.55;
+    legs[2].rotation.x = Math.sin(wt+Math.PI)*0.55;
+    legs[3].rotation.x = Math.sin(wt)*0.55;
+    player.mesh.userData.tail.rotation.x = 0.5+Math.sin(wt*1.3)*0.3;
   }
 
-  // Bone follows in mouth
+  // Carried bone sits in front of dog's mouth
   if (player.holdingBone) {
-    var bx = player.pos.x - Math.sin(player.facing)*0.6;
-    var bz = player.pos.z - Math.cos(player.facing)*0.6;
-    player.holdingBone.mesh.position.set(bx, 0.75, bz);
+    var bx = player.pos.x + Math.sin(player.facing)*0.7;
+    var bz = player.pos.z + Math.cos(player.facing)*0.7;
+    player.holdingBone.mesh.position.set(bx, player.pos.y+0.8, bz);
     player.holdingBone.mesh.visible = true;
 
     // Auto-deliver at den
-    if (player.pos.x*player.pos.x + player.pos.z*player.pos.z < BASE_R*BASE_R) {
+    if (player.pos.x*player.pos.x+player.pos.z*player.pos.z < BASE_R*BASE_R) {
       deliverBone();
     }
   }
 
   // Regen at base
-  if (player.pos.x*player.pos.x + player.pos.z*player.pos.z < BASE_R*BASE_R) {
+  if (player.pos.x*player.pos.x+player.pos.z*player.pos.z < BASE_R*BASE_R) {
     player.hp = Math.min(player.maxHp, player.hp + 10*dt);
-    player.sp = Math.min(player.maxSp, player.sp + 20*dt);
+    player.sp = Math.min(player.maxSp, player.sp + 22*dt);
   }
 
-  // Timers
-  if (G.iframes > 0) G.iframes -= dt;
-  if (G.biteT > 0) G.biteT -= dt;
-  if (G.comboT > 0) { G.comboT -= dt; if(G.comboT<=0) G.combo=0; }
+  if (G.iframes>0) G.iframes-=dt;
+  if (G.biteT>0) G.biteT-=dt;
+  if (G.comboT>0){G.comboT-=dt; if(G.comboT<=0)G.combo=0;}
 }
 
+// ─────────────────────────────────────────────
+// CAMERA — always behind player
+// ─────────────────────────────────────────────
+var camSmooth = new THREE.Vector3(0, CAM_H, -CAM_DIST);
+
 function updateCamera(dt) {
-  // Rotate camera with mouse
-  camYaw -= mouseDX * 0.003;
-  mouseDX = 0;
+  var ph = player.pos.y;
+  var tx = player.pos.x - Math.sin(player.facing) * CAM_DIST;
+  var tz = player.pos.z - Math.cos(player.facing) * CAM_DIST;
+  var ty = ph + CAM_H;
 
-  // Desired camera position: orbit around player
-  var tx = player.pos.x + Math.sin(camYaw) * CAM_DIST;
-  var tz = player.pos.z + Math.cos(camYaw) * CAM_DIST;
-  var ty = CAM_H;
-
-  // Smooth follow
-  var s = Math.min(1, 10*dt);
-  camSmooth.x += (tx - camSmooth.x) * s;
-  camSmooth.y += (ty - camSmooth.y) * s;
-  camSmooth.z += (tz - camSmooth.z) * s;
+  var s = Math.min(1, 9*dt);
+  camSmooth.x += (tx - camSmooth.x)*s;
+  camSmooth.y += (ty - camSmooth.y)*s;
+  camSmooth.z += (tz - camSmooth.z)*s;
 
   cam.position.copy(camSmooth);
-  cam.lookAt(player.pos.x, 0.8, player.pos.z);
+  cam.lookAt(player.pos.x, ph+1.0, player.pos.z);
 }
 
 // ─────────────────────────────────────────────
 // PLAYER ACTIONS
 // ─────────────────────────────────────────────
 function tryPickup() {
-  if (player.holdingBone) { dropBone(); return; }
-  var best = null, bestD = 3.0*3.0;
-  for (var i = 0; i < G.bones.length; i++) {
-    var b = G.bones[i];
-    if (b.owner !== null) continue;
-    var dx = b.pos.x - player.pos.x, dz = b.pos.z - player.pos.z;
-    var d2v = dx*dx+dz*dz;
-    if (d2v < bestD) { bestD = d2v; best = b; }
+  if (player.holdingBone) { pDropBone(); return; }
+  var best=null, bestD=3.2*3.2;
+  for(var i=0;i<G.bones.length;i++){
+    var b=G.bones[i];
+    if(b.owner!==null)continue;
+    var dx=b.pos.x-player.pos.x, dz=b.pos.z-player.pos.z;
+    var d2v=dx*dx+dz*dz;
+    if(d2v<bestD){bestD=d2v;best=b;}
   }
-  if (!best) { showMsg('No bone nearby!', 1.2); return; }
-  player.holdingBone = best;
-  best.owner = player;
-  best.mesh.visible = false;
-  player.mesh.userData.bim.visible = true;
-  showMsg(best.golden ? 'GOLDEN BONE! Get to your den!' : 'Bone! Get to your den!', 2.5);
+  if(!best){showMsg('No bone nearby!',1.2);return;}
+  player.holdingBone=best; best.owner=player; best.mesh.visible=false;
+  player.mesh.userData.bim.visible=true;
+  showMsg(best.golden?'GOLDEN BONE! Rush to den!':'Bone! Get to your den!', 2.5);
 }
 
-function dropBone() {
-  if (!player.holdingBone) return;
-  var b = player.holdingBone;
-  dropBoneToGround(b, player.pos.x - Math.sin(player.facing)*0.8, player.pos.z - Math.cos(player.facing)*0.8);
-  player.holdingBone = null;
-  player.mesh.userData.bim.visible = false;
-  showMsg('Bone dropped.', 1);
+function pDropBone() {
+  if(!player.holdingBone)return;
+  var bx=player.pos.x+Math.sin(player.facing)*0.8;
+  var bz=player.pos.z+Math.cos(player.facing)*0.8;
+  boneToGround(player.holdingBone, bx, bz);
+  player.holdingBone=null;
+  player.mesh.userData.bim.visible=false;
+  showMsg('Bone dropped.',1);
 }
 
 function deliverBone() {
-  if (!player.holdingBone) return;
-  var b = player.holdingBone;
-  G.score += b.value;
-  G.combo++;
-  G.comboT = 3;
-  var bonus = G.combo > 1 ? G.combo - 1 : 0;
-  if (bonus > 0) G.score += bonus;
-  document.getElementById('scoreEl').textContent = 'BONES: ' + G.score;
-
+  if(!player.holdingBone)return;
+  var b=player.holdingBone;
+  G.score+=b.value;
+  G.combo++; G.comboT=3;
+  var bonus=G.combo>1?G.combo-1:0;
+  if(bonus>0)G.score+=bonus;
+  document.getElementById('sc').textContent='BONES: '+G.score;
   scene.remove(b.mesh);
-  G.bones.splice(G.bones.indexOf(b), 1);
-  player.holdingBone = null;
-  player.mesh.userData.bim.visible = false;
-  player.hp = Math.min(player.maxHp, player.hp + 12);
-
-  var lbl = b.golden ? 'GOLDEN BONE!' : b.big ? 'Big bone!' : 'Bone!';
-  var msg = lbl + ' +' + b.value + (G.combo > 1 ? ' x'+G.combo+' COMBO +'+bonus+'!' : '');
-  showMsg(msg, 2.5);
-  setTimeout(function() { if(!G.dead) spawnBone(); }, rnd(2000,4000));
+  G.bones.splice(G.bones.indexOf(b),1);
+  player.holdingBone=null;
+  player.mesh.userData.bim.visible=false;
+  player.hp=Math.min(player.maxHp,player.hp+12);
+  var lbl=b.golden?'GOLDEN BONE!':b.big?'Big bone!':'Bone!';
+  showMsg(lbl+' +'+b.value+(G.combo>1?' x'+G.combo+' COMBO +'+bonus+'!':''),2.8);
+  setTimeout(function(){if(!G.dead)spawnBone();}, rnd(2000,4000));
 }
 
 function tryBite() {
-  if (player.holdingBone) { showMsg('Drop bone to fight!', 1.5); return; }
-  if (G.biteT > 0) return;
-  G.biteT = G.biteCd;
-
-  var hit = false;
-  for (var i = 0; i < G.enemies.length; i++) {
-    var e = G.enemies[i];
-    if (e.dead) continue;
-    var dx = e.pos.x - player.pos.x, dz = e.pos.z - player.pos.z;
-    if (dx*dx+dz*dz < player.cls.bite * player.cls.bite) {
-      e.hp -= player.cls.dmg;
-      spawnParticles(e.pos.clone().setY(0.6), 0xFF8800, 7);
-      if (e.hp <= 0) killEnemy(e);
-      else {
-        if (e.holdingBone) eDropBone(e);
-        e.state = 'stun'; e.stunT = 0.4;
-      }
-      hit = true;
+  if(player.holdingBone){showMsg('Drop bone first!',1.5);return;}
+  if(G.biteT>0)return;
+  G.biteT=G.biteCd;
+  var hit=false;
+  for(var i=0;i<G.enemies.length;i++){
+    var e=G.enemies[i];
+    if(e.dead)continue;
+    var dx=e.pos.x-player.pos.x, dz=e.pos.z-player.pos.z;
+    if(dx*dx+dz*dz < player.cls.bite*player.cls.bite){
+      e.hp-=player.cls.dmg;
+      mkParticles(e.pos.x, e.pos.y+0.6, e.pos.z, 0xFF8800, 8);
+      if(e.hp<=0) killEnemy(e);
+      else { if(e.holdingBone)eDropBone(e); e.state='stun'; e.stunT=0.38; }
+      hit=true;
     }
   }
-  if (!hit) {
-    // Bite whiff — show small dust puff in facing direction
-    var wx = player.pos.x - Math.sin(player.facing)*1.5;
-    var wz = player.pos.z - Math.cos(player.facing)*1.5;
-    spawnParticles(new THREE.Vector3(wx, 0.5, wz), 0xCCCCCC, 3);
-  }
+  if(!hit) mkParticles(player.pos.x+Math.sin(player.facing)*1.5, player.pos.y+0.6, player.pos.z+Math.cos(player.facing)*1.5, 0xDDDDDD, 3);
 }
 
 // ─────────────────────────────────────────────
 // ENEMIES
 // ─────────────────────────────────────────────
-function spawnEnemy(typeKey) {
-  var td = ETYPES[typeKey] || ETYPES.stray;
-  var angle = rnd(0, Math.PI*2);
-  var dist = rnd(W*0.38, W*0.48);
-  var sx = Math.cos(angle)*dist, sz = Math.sin(angle)*dist;
-
-  var mesh = makeDog(td.col, td.sc);
-  mesh.position.set(sx, 0, sz);
+function spawnEnemy(tk) {
+  var td=ET[tk]||ET.stray;
+  var ang=rnd(0,Math.PI*2), dist2=rnd(W*0.38,W*0.48);
+  var sx=Math.cos(ang)*dist2, sz=Math.sin(ang)*dist2;
+  var mesh=mkDog(td.col, td.cc, td.sc);
+  mesh.position.set(sx,th(sx,sz),sz);
   scene.add(mesh);
 
-  // HP bar billboard
-  var hpGroup = new THREE.Group();
-  var bg = new THREE.Mesh(new THREE.PlaneGeometry(1.1,0.12), new THREE.MeshBasicMaterial({color:0x222222, depthTest:false}));
-  var fg = new THREE.Mesh(new THREE.PlaneGeometry(1.1,0.12), new THREE.MeshBasicMaterial({color:0xEE2222, depthTest:false}));
-  fg.position.z = 0.01;
-  hpGroup.add(bg); hpGroup.add(fg);
-  scene.add(hpGroup);
+  // HP bar
+  var hg=new THREE.Group();
+  var hbg=new THREE.Mesh(new THREE.PlaneGeometry(1.15,0.13),bm(0x222222));
+  var hfg=new THREE.Mesh(new THREE.PlaneGeometry(1.15,0.13),bm(0xEE2222));
+  hfg.position.z=0.01; hg.add(hbg); hg.add(hfg); scene.add(hg);
 
-  var e = {
-    mesh: mesh, td: td, typeKey: typeKey,
-    pos: new THREE.Vector3(sx, 0, sz),
-    facing: rnd(0, Math.PI*2),
-    hp: td.hp, maxHp: td.hp,
-    state: 'wander',
-    targetBone: null, holdingBone: null,
-    wanderAngle: rnd(0,Math.PI*2), wanderT: 0,
-    atkT: 0, atkCd: 0.85 + rnd(0, 0.4),
-    stunT: 0, detectR: 13 + rnd(0,5),
-    biteR: 2.1, dead: false,
-    hpGroup: hpGroup, hpFg: fg,
-    walkT: 0,
+  var e={
+    mesh:mesh,td:td,tk:tk,
+    pos:new THREE.Vector3(sx,0,sz),
+    facing:rnd(0,Math.PI*2),
+    hp:td.hp,maxHp:td.hp,
+    state:'wander',targetBone:null,holdingBone:null,
+    wt:0,atkT:0,atkCd:0.85+rnd(0,0.4),
+    stunT:0,detectR:13+rnd(0,5),biteR:2.1,
+    dead:false,hg:hg,hfg:hfg,
+    wanderAngle:rnd(0,Math.PI*2),wanderT:0,
   };
   G.enemies.push(e);
   return e;
 }
 
 function updateEnemy(e, dt) {
-  if (e.dead) return;
+  if(e.dead)return;
 
   // HP bar
-  e.hpGroup.position.copy(e.pos);
-  e.hpGroup.position.y += 2.3 * e.td.sc;
-  e.hpGroup.lookAt(cam.position);
-  var hr = e.hp / e.maxHp;
-  e.hpFg.scale.x = Math.max(0, hr);
-  e.hpFg.position.x = (hr - 1) * 0.55;
+  e.hg.position.copy(e.pos); e.hg.position.y+=2.3*e.td.sc;
+  e.hg.lookAt(cam.position);
+  var hr=e.hp/e.maxHp;
+  e.hfg.scale.x=Math.max(0,hr); e.hfg.position.x=(hr-1)*0.575;
 
-  // Stun
-  if (e.state === 'stun') {
-    e.stunT -= dt;
-    if (e.stunT <= 0) e.state = 'wander';
-    e.mesh.position.copy(e.pos);
-    return;
+  if(e.state==='stun'){
+    e.stunT-=dt; if(e.stunT<=0)e.state='wander';
+    e.mesh.position.copy(e.pos); return;
   }
 
-  e.atkT += dt;
-  var pd = e.pos.distanceTo(player.pos);
+  e.atkT+=dt;
+  var pd=e.pos.distanceTo(player.pos);
 
-  if (e.state === 'wander') {
-    if (!e.holdingBone && pd < e.detectR && Math.random() < e.td.agg * dt * 2) {
-      e.state = 'attack';
-    } else {
-      var nb = nearestFreeBone(e.pos, 22);
-      if (nb) { e.targetBone = nb; e.state = 'seek'; }
-      else {
-        e.wanderT -= dt;
-        if (e.wanderT <= 0) { e.wanderAngle += rnd(-1.5,1.5); e.wanderT = rnd(1,2.5); }
-        eMoveDir(e, Math.cos(e.wanderAngle)*e.td.spd*0.5, Math.sin(e.wanderAngle)*e.td.spd*0.5, dt);
+  if(e.state==='wander'){
+    if(!e.holdingBone&&pd<e.detectR&&Math.random()<e.td.agg*dt*2){e.state='attack';}
+    else{
+      var nb=nearestFreeBone2(e.pos,22);
+      if(nb){e.targetBone=nb;e.state='seek';}
+      else{
+        e.wanderT-=dt;
+        if(e.wanderT<=0){e.wanderAngle+=rnd(-1.8,1.8);e.wanderT=rnd(1,2.5);}
+        eMove(e,Math.cos(e.wanderAngle)*e.td.spd*0.5,Math.sin(e.wanderAngle)*e.td.spd*0.5,dt);
       }
     }
   }
-  else if (e.state === 'seek') {
-    if (!e.targetBone || e.targetBone.owner !== null) { e.targetBone=null; e.state='wander'; }
-    else if (!e.holdingBone && pd < 3.5 && e.td.agg > 0.55) { e.state='attack'; }
-    else {
-      var bp = e.targetBone.pos;
-      var bdx = bp.x-e.pos.x, bdz = bp.z-e.pos.z;
-      var bd = Math.sqrt(bdx*bdx+bdz*bdz);
-      if (bd < 1.3) { eGrabBone(e, e.targetBone); e.state='carry'; }
-      else { eMoveDir(e, (bdx/bd)*e.td.spd, (bdz/bd)*e.td.spd, dt); }
+  else if(e.state==='seek'){
+    if(!e.targetBone||e.targetBone.owner!==null){e.targetBone=null;e.state='wander';}
+    else if(!e.holdingBone&&pd<3.5&&e.td.agg>0.55){e.state='attack';}
+    else{
+      var bp=e.targetBone.pos;
+      var bdx=bp.x-e.pos.x,bdz=bp.z-e.pos.z,bd=Math.sqrt(bdx*bdx+bdz*bdz);
+      if(bd<1.3){eGrab(e,e.targetBone);e.state='carry';}
+      else eMove(e,(bdx/bd)*e.td.spd,(bdz/bd)*e.td.spd,dt);
     }
   }
-  else if (e.state === 'carry') {
-    if (!e.holdingBone) { e.state='wander'; }
-    else {
-      var ddx = G.eDen.x-e.pos.x, ddz = G.eDen.z-e.pos.z;
-      var dd = Math.sqrt(ddx*ddx+ddz*ddz);
-      if (dd < 3) { eScoreBone(e); e.state='wander'; }
-      else { eMoveDir(e, (ddx/dd)*e.td.spd*0.85, (ddz/dd)*e.td.spd*0.85, dt); }
+  else if(e.state==='carry'){
+    if(!e.holdingBone){e.state='wander';}
+    else{
+      var ddx=G.eDen.x-e.pos.x,ddz=G.eDen.z-e.pos.z,dd2=Math.sqrt(ddx*ddx+ddz*ddz);
+      if(dd2<3.2){eScore(e);e.state='wander';}
+      else eMove(e,(ddx/dd2)*e.td.spd*0.85,(ddz/dd2)*e.td.spd*0.85,dt);
     }
   }
-  else if (e.state === 'attack') {
-    if (e.holdingBone) { e.state='carry'; }
-    else if (pd > e.detectR*1.6) { e.state='wander'; }
-    else if (e.hp < e.maxHp*0.18) { e.state='flee'; }
-    else {
-      if (pd < e.biteR) {
-        if (e.atkT >= e.atkCd) { eBitePlayer(e); e.atkT=0; }
-      } else {
-        var adx=player.pos.x-e.pos.x, adz=player.pos.z-e.pos.z;
-        var al=Math.sqrt(adx*adx+adz*adz);
-        eMoveDir(e, (adx/al)*e.td.spd, (adz/al)*e.td.spd, dt);
+  else if(e.state==='attack'){
+    if(e.holdingBone){e.state='carry';}
+    else if(pd>e.detectR*1.6){e.state='wander';}
+    else if(e.hp<e.maxHp*0.18){e.state='flee';}
+    else{
+      if(pd<e.biteR){if(e.atkT>=e.atkCd){eBite(e);e.atkT=0;}}
+      else{
+        var adx=player.pos.x-e.pos.x,adz=player.pos.z-e.pos.z,al=Math.sqrt(adx*adx+adz*adz)||1;
+        eMove(e,(adx/al)*e.td.spd,(adz/al)*e.td.spd,dt);
       }
     }
   }
-  else if (e.state === 'flee') {
-    if (e.hp > e.maxHp*0.38) { e.state='wander'; }
-    else {
-      var fdx=e.pos.x-player.pos.x, fdz=e.pos.z-player.pos.z;
-      var fl=Math.sqrt(fdx*fdx+fdz*fdz)||1;
-      eMoveDir(e, (fdx/fl)*e.td.spd, (fdz/fl)*e.td.spd, dt);
-    }
+  else if(e.state==='flee'){
+    if(e.hp>e.maxHp*0.38){e.state='wander';}
+    else{var fx=e.pos.x-player.pos.x,fz=e.pos.z-player.pos.z,fl=Math.sqrt(fx*fx+fz*fz)||1;eMove(e,(fx/fl)*e.td.spd,(fz/fl)*e.td.spd,dt);}
   }
 
-  // Walk animation
-  if (e.pos.distanceTo(e.mesh.position) > 0.01 || e.state==='attack') {
-    e.walkT += dt*8;
-    var legs = e.mesh.userData.legs;
-    legs[0].rotation.x = Math.sin(e.walkT)*0.5;
-    legs[1].rotation.x = Math.sin(e.walkT+Math.PI)*0.5;
-    legs[2].rotation.x = Math.sin(e.walkT+Math.PI)*0.5;
-    legs[3].rotation.x = Math.sin(e.walkT)*0.5;
-  }
+  // Walk anim
+  e.mesh.userData.wt+=dt*8;
+  var wt2=e.mesh.userData.wt;
+  var legs2=e.mesh.userData.legs;
+  legs2[0].rotation.x=Math.sin(wt2)*0.5;
+  legs2[1].rotation.x=Math.sin(wt2+Math.PI)*0.5;
+  legs2[2].rotation.x=Math.sin(wt2+Math.PI)*0.5;
+  legs2[3].rotation.x=Math.sin(wt2)*0.5;
 
   e.mesh.position.copy(e.pos);
-  e.mesh.rotation.y = e.facing;
+  e.mesh.rotation.y=e.facing;
 }
 
-function eMoveDir(e, vx, vz, dt) {
-  var nx = e.pos.x + vx*dt;
-  var nz = e.pos.z + vz*dt;
-  nx = Math.max(-W+2, Math.min(W-2, nx));
-  nz = Math.max(-W+2, Math.min(W-2, nz));
-  var blocked = false;
-  for (var i = 0; i < G.obstacles.length; i++) {
-    var o = G.obstacles[i];
-    var dx=nx-o.x, dz=nz-o.z;
-    if (dx*dx+dz*dz < (o.r+0.65)*(o.r+0.65)) { blocked=true; e.wanderAngle+=0.9; break; }
+function eMove(e, vx, vz, dt) {
+  var nx=e.pos.x+vx*dt, nz=e.pos.z+vz*dt;
+  nx=Math.max(-W+2,Math.min(W-2,nx));
+  nz=Math.max(-W+2,Math.min(W-2,nz));
+  var blocked=false;
+  for(var i=0;i<G.obs.length;i++){
+    var o=G.obs[i],dx3=nx-o.x,dz3=nz-o.z;
+    if(dx3*dx3+dz3*dz3<(o.r+0.65)*(o.r+0.65)){blocked=true;e.wanderAngle+=0.9;break;}
   }
-  if (!blocked) {
-    e.pos.x = nx; e.pos.z = nz;
-    if (vx!==0||vz!==0) {
-      var tf = Math.atan2(-vx, vz);
-      var da = tf - e.facing;
-      while(da>Math.PI) da-=Math.PI*2;
-      while(da<-Math.PI) da+=Math.PI*2;
-      e.facing += da * Math.min(1, 10*dt);
+  if(!blocked){
+    e.pos.x=nx; e.pos.z=nz;
+    e.pos.y=th(nx,nz); // terrain follow
+    if(vx!==0||vz!==0){
+      // Facing direction: enemy moves in direction (vx, vz), facing = atan2(vx, vz)
+      var tf=Math.atan2(vx,vz);
+      var da=tf-e.facing; while(da>Math.PI)da-=Math.PI*2; while(da<-Math.PI)da+=Math.PI*2;
+      e.facing+=da*Math.min(1,10*dt);
     }
   }
 }
 
-function nearestFreeBone(pos, range) {
-  var best=null, bestD=range*range;
-  for (var i=0;i<G.bones.length;i++) {
-    var b=G.bones[i];
-    if(b.owner!==null) continue;
-    var dx=b.pos.x-pos.x, dz=b.pos.z-pos.z;
-    var d2v=dx*dx+dz*dz;
+function nearestFreeBone2(pos, range) {
+  var best=null,bestD=range*range;
+  for(var i=0;i<G.bones.length;i++){
+    var b=G.bones[i]; if(b.owner!==null)continue;
+    var dx=b.pos.x-pos.x,dz=b.pos.z-pos.z,d2v=dx*dx+dz*dz;
     if(d2v<bestD){bestD=d2v;best=b;}
   }
   return best;
 }
 
-function eGrabBone(e, bone) {
-  bone.owner = e; bone.mesh.visible = false;
-  e.holdingBone = bone;
-  e.mesh.userData.bim.visible = true;
+function eGrab(e, bone) {
+  bone.owner=e; bone.mesh.visible=false;
+  e.holdingBone=bone; e.mesh.userData.bim.visible=true;
 }
-
 function eDropBone(e) {
-  if (!e.holdingBone) return;
-  dropBoneToGround(e.holdingBone, e.pos.x, e.pos.z);
-  e.holdingBone = null;
-  e.mesh.userData.bim.visible = false;
+  if(!e.holdingBone)return;
+  boneToGround(e.holdingBone,e.pos.x,e.pos.z);
+  e.holdingBone=null; e.mesh.userData.bim.visible=false;
 }
-
-function eScoreBone(e) {
-  if (!e.holdingBone) return;
+function eScore(e) {
+  if(!e.holdingBone)return;
   scene.remove(e.holdingBone.mesh);
   G.bones.splice(G.bones.indexOf(e.holdingBone),1);
-  e.holdingBone = null;
-  e.mesh.userData.bim.visible = false;
-  showMsg('Enemy scored a bone!', 2);
-  setTimeout(function(){if(!G.dead)spawnBone();}, 4000);
+  e.holdingBone=null; e.mesh.userData.bim.visible=false;
+  showMsg('Enemy scored!',1.8);
+  setTimeout(function(){if(!G.dead)spawnBone();},4000);
 }
-
-function eBitePlayer(e) {
-  if (G.iframes > 0) return;
-  if (player.holdingBone) {
-    dropBone();
-    showMsg('They knocked your bone loose!', 2.5);
-  }
-  player.hp = Math.max(0, player.hp - e.td.dmg);
-  G.iframes = 0.5;
-  spawnParticles(player.pos.clone().setY(0.6), 0xFF2200, 8);
-  if (player.hp <= 0) triggerDeath();
+function eBite(e) {
+  if(G.iframes>0)return;
+  if(player.holdingBone){pDropBone();showMsg('They knocked your bone loose!',2.5);}
+  player.hp=Math.max(0,player.hp-e.td.dmg);
+  G.iframes=0.5;
+  mkParticles(player.pos.x,player.pos.y+0.6,player.pos.z,0xFF2200,9);
+  if(player.hp<=0)triggerDeath();
 }
-
 function killEnemy(e) {
-  e.dead = true;
-  if (e.holdingBone) eDropBone(e);
-  scene.remove(e.mesh);
-  scene.remove(e.hpGroup);
-  spawnParticles(e.pos.clone().setY(0.5), 0xFF6600, 14);
-  showMsg(e.td.name + ' defeated!', 2);
-  if (Math.random() > 0.45) {
-    var nb = spawnBone();
-    nb.pos.copy(e.pos); nb.pos.y = 0.3;
-    nb.mesh.position.copy(nb.pos);
-  }
+  e.dead=true;
+  if(e.holdingBone)eDropBone(e);
+  scene.remove(e.mesh); scene.remove(e.hg);
+  mkParticles(e.pos.x,e.pos.y+0.5,e.pos.z,0xFF6600,14);
+  showMsg(e.td.n+' defeated!',2);
+  if(Math.random()>0.45){var nb=spawnBone();nb.pos.copy(e.pos);nb.pos.y=th(e.pos.x,e.pos.z)+0.35;nb.mesh.position.copy(nb.pos);}
 }
 
 // ─────────────────────────────────────────────
 // PARTICLES
 // ─────────────────────────────────────────────
-function spawnParticles(origin, color, n) {
-  for (var i=0; i<n; i++) {
-    var m = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.1), new THREE.MeshBasicMaterial({color:color}));
-    m.position.copy(origin);
-    scene.add(m);
-    G.parts.push({
-      m: m,
-      v: new THREE.Vector3(rnd(-4,4), rnd(2,6), rnd(-4,4)),
-      life: rnd(0.5, 0.9)
-    });
+function mkParticles(x, y, z, col, n) {
+  for(var i=0;i<n;i++){
+    var m=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.1),bm(col));
+    m.position.set(x,y,z); scene.add(m);
+    G.parts.push({m:m,v:new THREE.Vector3(rnd(-4,4),rnd(2,7),rnd(-4,4)),life:rnd(0.5,0.9)});
   }
 }
-
 function updateParticles(dt) {
-  for (var i=G.parts.length-1; i>=0; i--) {
-    var p = G.parts[i];
-    p.life -= dt;
-    if (p.life <= 0) { scene.remove(p.m); G.parts.splice(i,1); continue; }
-    p.v.y -= 12*dt;
-    p.m.position.addScaledVector(p.v, dt);
+  for(var i=G.parts.length-1;i>=0;i--){
+    var p=G.parts[i]; p.life-=dt;
+    if(p.life<=0){scene.remove(p.m);G.parts.splice(i,1);continue;}
+    p.v.y-=14*dt; p.m.position.addScaledVector(p.v,dt);
   }
 }
 
@@ -888,116 +891,89 @@ function updateParticles(dt) {
 // WAVES
 // ─────────────────────────────────────────────
 function updateWaves(dt) {
-  G.waveTimer += dt; G.spawnT += dt;
-  var alive = 0;
-  for(var i=0;i<G.enemies.length;i++) if(!G.enemies[i].dead) alive++;
-
-  if (G.spawnT >= G.spawnInterval && alive < G.maxE) {
-    G.spawnT = 0;
-    var pool = ['stray'];
-    if(G.wave>=2) pool.push('swift');
-    if(G.wave>=3) pool.push('bulldog');
-    if(G.wave>=4) pool.push('pitbull');
-    if(G.wave>=6) pool.push('alpha');
+  G.waveTimer+=dt; G.spawnT+=dt;
+  var alive=0; for(var i=0;i<G.enemies.length;i++)if(!G.enemies[i].dead)alive++;
+  if(G.spawnT>=G.spawnInterval&&alive<G.maxE){
+    G.spawnT=0;
+    var pool=['stray'];
+    if(G.wave>=2)pool.push('swift');
+    if(G.wave>=3)pool.push('bulldog');
+    if(G.wave>=4)pool.push('pitbull');
+    if(G.wave>=6)pool.push('alpha');
     spawnEnemy(pool[Math.floor(Math.random()*pool.length)]);
-    if(G.wave>=3 && Math.random()>0.55) {
-      (function(p){setTimeout(function(){if(!G.dead)spawnEnemy(p[Math.floor(Math.random()*p.length)]);},1800);})(pool);
-    }
+    if(G.wave>=3&&Math.random()>0.55)(function(p){setTimeout(function(){if(!G.dead)spawnEnemy(p[Math.floor(Math.random()*p.length)]);},1800);})(pool);
+  }
+  if(G.waveTimer>=G.waveLen){
+    G.wave++;G.waveTimer=0;
+    G.maxE=Math.min(8+G.wave*2,22);
+    G.spawnInterval=Math.max(2.5,9-G.wave*0.6);
+    showMsg('-- WAVE '+G.wave+' --',3.5);
+    for(var b=0;b<3;b++)spawnBone();
+    if(G.wave%5===0)setTimeout(function(){if(!G.dead){spawnEnemy('alpha');showMsg('ALPHA DOG INCOMING!',4);}},2000);
+  }
+}
+
+// ─────────────────────────────────────────────
+// HUD
+// ─────────────────────────────────────────────
+function showMsg(t,s){G.msgTimer=s||2;document.getElementById('msg').textContent=t;}
+
+function updateHUD() {
+  document.getElementById('hf').style.width=(player.hp/player.maxHp*100)+'%';
+  document.getElementById('sf').style.width=(player.sp/player.maxSp*100)+'%';
+  var alive=0; for(var i=0;i<G.enemies.length;i++)if(!G.enemies[i].dead)alive++;
+  document.getElementById('wv').textContent='WAVE '+G.wave+' | ENEMIES: '+alive;
+
+  var bnel=document.getElementById('bn');
+  if(player.holdingBone){
+    var atDen=player.pos.x*player.pos.x+player.pos.z*player.pos.z<BASE_R*BASE_R;
+    bnel.textContent=atDen?'Walk into den — delivering!':'Carrying '+(player.holdingBone.golden?'GOLDEN BONE':'bone')+' — run to den!';
+    bnel.style.color=player.holdingBone.golden?'#FFD700':'#ffe000';
+  } else {
+    var nb2=nearestFreeBone2(player.pos,3.2);
+    if(nb2){bnel.textContent='[E] Pick up bone!';bnel.style.color='#fff';}
+    else{bnel.textContent=G.biteT>0?'[bite cooldown]':'';bnel.style.color='#888';}
   }
 
-  if (G.waveTimer >= G.waveLen) {
-    G.wave++; G.waveTimer=0;
-    G.maxE = Math.min(8 + G.wave*2, 22);
-    G.spawnInterval = Math.max(2.5, 9 - G.wave*0.6);
-    showMsg('-- WAVE ' + G.wave + ' --', 3.5);
-    for(var b=0;b<3;b++) spawnBone();
-    if(G.wave%3===0) spawnBone(); // bonus bone
-    if(G.wave%5===0) setTimeout(function(){if(!G.dead){spawnEnemy('alpha');showMsg('ALPHA DOG INCOMING!',4);}},2000);
+  if(G.msgTimer>0)G.msgTimer-=1/60;
+  else document.getElementById('msg').textContent='';
+}
+
+function drawMinimap() {
+  var mc=document.getElementById('mm');
+  var ctx=mc.getContext('2d');
+  var mw=mc.width,mh=mc.height,sc2=mw/(W*2),cx=mw/2,cy=mh/2;
+  ctx.fillStyle='rgba(0,0,0,0.72)';ctx.fillRect(0,0,mw,mh);
+  ctx.fillStyle='#FFE000';ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#FF4400';ctx.beginPath();ctx.arc(cx+G.eDen.x*sc2,cy+G.eDen.z*sc2,5,0,Math.PI*2);ctx.fill();
+  for(var i=0;i<G.bones.length;i++){
+    var b2=G.bones[i];if(b2.owner)continue;
+    ctx.fillStyle=b2.golden?'#FFD700':'#fff';
+    ctx.fillRect(cx+b2.pos.x*sc2-1,cy+b2.pos.z*sc2-1,3,3);
   }
+  for(var i=0;i<G.enemies.length;i++){
+    var e2=G.enemies[i];if(e2.dead)continue;
+    ctx.fillStyle=e2.state==='attack'?'#FF2200':'#FF8800';
+    ctx.fillRect(cx+e2.pos.x*sc2-2,cy+e2.pos.z*sc2-2,4,4);
+  }
+  var px=cx+player.pos.x*sc2,pz=cy+player.pos.z*sc2;
+  ctx.fillStyle='#00FF55';
+  ctx.beginPath();
+  ctx.moveTo(px+Math.sin(player.facing)*5, pz+Math.cos(player.facing)*5);
+  ctx.lineTo(px+Math.sin(player.facing+2.3)*3, pz+Math.cos(player.facing+2.3)*3);
+  ctx.lineTo(px+Math.sin(player.facing-2.3)*3, pz+Math.cos(player.facing-2.3)*3);
+  ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.strokeRect(0,0,mw,mh);
 }
 
 // ─────────────────────────────────────────────
 // DEATH
 // ─────────────────────────────────────────────
 function triggerDeath() {
-  G.dead = true;
-  document.getElementById('deathScreen').style.display = 'flex';
-  document.getElementById('deathScore').textContent =
-    'Score: ' + G.score + ' bones  |  Wave ' + G.wave + '  |  ' + Math.floor(G.gameTime) + 's';
+  G.dead=true;
+  document.getElementById('ds').style.display='flex';
+  document.getElementById('dscore').textContent='Score: '+G.score+' bones  |  Wave '+G.wave+'  |  '+Math.floor(G.gameTime)+'s';
   document.exitPointerLock();
-}
-
-// ─────────────────────────────────────────────
-// HUD
-// ─────────────────────────────────────────────
-function updateHUD() {
-  document.getElementById('hpFill').style.width = (player.hp/player.maxHp*100) + '%';
-  document.getElementById('spFill').style.width = (player.sp/player.maxSp*100) + '%';
-  var alive=0; for(var i=0;i<G.enemies.length;i++) if(!G.enemies[i].dead) alive++;
-  document.getElementById('waveEl').textContent = 'WAVE ' + G.wave + ' | ENEMIES: ' + alive;
-
-  var be = document.getElementById('boneEl');
-  if (player.holdingBone) {
-    var atDen = player.pos.x*player.pos.x+player.pos.z*player.pos.z < BASE_R*BASE_R;
-    be.textContent = atDen ? 'Walk into den to deliver!' : (player.holdingBone.golden ? 'GOLDEN BONE - RUN!' : 'Carrying bone - get to den!');
-    be.style.color = player.holdingBone.golden ? '#FFD700' : '#ffe000';
-  } else {
-    be.textContent = G.biteT > 0 ? '[bite cooldown...]' : '';
-    be.style.color = '#888';
-  }
-
-  // Nearby bone indicator
-  var nearBone = nearestFreeBone(player.pos, 3.0);
-  if (nearBone && !player.holdingBone) {
-    be.textContent = '[E] Pick up bone!';
-    be.style.color = '#fff';
-  }
-
-  if (G.msgTimer > 0) G.msgTimer -= 1/60;
-  else document.getElementById('msgEl').textContent = '';
-}
-
-function drawMinimap() {
-  var mc = document.getElementById('minimap');
-  var ctx = mc.getContext('2d');
-  var mw = mc.width, mh = mc.height;
-  var sc = mw / (W*2);
-  var cx = mw/2, cy = mh/2;
-
-  ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0,0,mw,mh);
-
-  // base
-  ctx.fillStyle='#FFE000'; ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fill();
-  // enemy den
-  ctx.fillStyle='#FF3300';
-  ctx.beginPath(); ctx.arc(cx+G.eDen.x*sc,cy+G.eDen.z*sc,5,0,Math.PI*2); ctx.fill();
-
-  // bones
-  for(var i=0;i<G.bones.length;i++){
-    var b=G.bones[i];
-    if(b.owner)continue;
-    ctx.fillStyle=b.golden?'#FFD700':'#fff';
-    ctx.fillRect(cx+b.pos.x*sc-1,cy+b.pos.z*sc-1,3,3);
-  }
-
-  // enemies
-  for(var i=0;i<G.enemies.length;i++){
-    var e=G.enemies[i];
-    if(e.dead)continue;
-    ctx.fillStyle=e.state==='attack'?'#FF2200':'#FF8800';
-    ctx.fillRect(cx+e.pos.x*sc-2,cy+e.pos.z*sc-2,4,4);
-  }
-
-  // player (triangle showing facing)
-  var px=cx+player.pos.x*sc, pz=cy+player.pos.z*sc;
-  ctx.fillStyle='#00FF44';
-  ctx.beginPath();
-  ctx.moveTo(px - Math.sin(player.facing)*5, pz - Math.cos(player.facing)*5);
-  ctx.lineTo(px + Math.sin(player.facing+Math.PI/2)*3, pz + Math.cos(player.facing+Math.PI/2)*3);
-  ctx.lineTo(px + Math.sin(player.facing-Math.PI/2)*3, pz + Math.cos(player.facing-Math.PI/2)*3);
-  ctx.closePath(); ctx.fill();
-
-  ctx.strokeStyle='#555'; ctx.lineWidth=1; ctx.strokeRect(0,0,mw,mh);
 }
 
 // ─────────────────────────────────────────────
@@ -1006,110 +982,87 @@ function drawMinimap() {
 var lastT = 0;
 function loop(t) {
   requestAnimationFrame(loop);
-  var dt = Math.min((t - lastT) / 1000, 0.05);
-  lastT = t;
+  var dt=Math.min((t-lastT)/1000,0.05); lastT=t;
 
-  if (!G.started) {
-    // Spin camera on start screen
-    cam.position.set(Math.sin(t*0.0003)*16, 8, Math.cos(t*0.0003)*16);
-    cam.lookAt(0, 0, 0);
-    renderer.render(scene, cam);
+  if(!G.started){
+    cam.position.set(Math.sin(t*0.0003)*18, 9, Math.cos(t*0.0003)*18);
+    cam.lookAt(0,0,0);
+    renderer.render(scene,cam);
     return;
   }
-  if (G.dead) { renderer.render(scene, cam); return; }
-
-  G.gameTime += dt;
+  if(G.dead){renderer.render(scene,cam);return;}
+  G.gameTime+=dt;
 
   updateCamera(dt);
   updatePlayer(dt);
-
-  // Update enemies
-  for (var i=G.enemies.length-1; i>=0; i--) {
-    var e=G.enemies[i];
-    if(e.dead){G.enemies.splice(i,1);continue;}
-    updateEnemy(e,dt);
-  }
+  for(var i=G.enemies.length-1;i>=0;i--){var e=G.enemies[i];if(e.dead){G.enemies.splice(i,1);continue;}updateEnemy(e,dt);}
 
   // Bob bones
-  for (var i=0; i<G.bones.length; i++) {
-    var b=G.bones[i];
-    if(b.owner)continue;
-    b.bobT += dt*2.2;
-    b.mesh.position.y = 0.3 + Math.sin(b.bobT)*0.1;
-    b.mesh.rotation.y += dt*0.6;
+  for(var i=0;i<G.bones.length;i++){
+    var b3=G.bones[i];if(b3.owner)continue;
+    b3.bt+=dt*2.2;
+    b3.mesh.position.y=b3.pos.y+Math.sin(b3.bt)*0.1;
+    b3.mesh.rotation.y+=dt*0.7;
   }
 
   updateParticles(dt);
   updateWaves(dt);
 
-  // Keep minimum bones
-  var freeBones=0; for(var i=0;i<G.bones.length;i++) if(!G.bones[i].owner) freeBones++;
-  if(freeBones < 6) spawnBone();
+  var free=0;for(var i=0;i<G.bones.length;i++)if(!G.bones[i].owner)free++;
+  if(free<6)spawnBone();
 
   updateHUD();
   drawMinimap();
-  renderer.render(scene, cam);
+  renderer.render(scene,cam);
 }
 
 // ─────────────────────────────────────────────
 // INPUT
 // ─────────────────────────────────────────────
-document.addEventListener('keydown', function(e) {
-  KB[e.code] = true;
-  if (!G.started || G.dead) return;
-  if (e.code === 'KeyE') tryPickup();
-  if (e.code === 'Space') { e.preventDefault(); tryBite(); }
+document.addEventListener('keydown',function(e){
+  KB[e.code]=true;
+  if(!G.started||G.dead)return;
+  if(e.code==='KeyE')tryPickup();
+  if(e.code==='Space'){e.preventDefault();tryBite();}
 });
-document.addEventListener('keyup', function(e) { KB[e.code] = false; });
-document.addEventListener('mousedown', function(e) {
-  if (!G.started || G.dead) return;
-  if (e.button === 0) tryBite();
+document.addEventListener('keyup',function(e){KB[e.code]=false;});
+document.addEventListener('mousedown',function(e){if(!G.started||G.dead)return;if(e.button===0)tryBite();});
+document.addEventListener('mousemove',function(e){
+  if(!G.started||G.dead)return;
+  if(document.pointerLockElement===canvas)mdx+=e.movementX;
 });
-document.addEventListener('mousemove', function(e) {
-  if (!G.started || G.dead) return;
-  if (document.pointerLockElement === canvas) mouseDX += e.movementX;
-});
-canvas.addEventListener('click', function() {
-  if (G.started && !G.dead) canvas.requestPointerLock();
-});
+canvas.addEventListener('click',function(){if(G.started&&!G.dead)canvas.requestPointerLock();});
 
 // ─────────────────────────────────────────────
-// START SCREEN FUNCTIONS (global, hoisted)
+// START SCREEN (hoisted functions)
 // ─────────────────────────────────────────────
-function pickClass(c) {
-  ['mutt','bulldog','greyhound','husky','pitbull'].forEach(function(k) {
-    document.getElementById('b-'+k).className = 'cb' + (k===c?' on':'');
+function pick(c) {
+  ['mutt','bulldog','greyhound','husky','pitbull'].forEach(function(k){
+    document.getElementById('b-'+k).className='cb'+(k===c?' on':'');
   });
-  G.selectedClass = c;
+  G.cls=c;
 }
 
 function startGame() {
-  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('ss').style.display='none';
   buildWorld();
   initPlayer();
-  // Place camera behind player
-  camSmooth.set(0, CAM_H, CAM_DIST);
+  camSmooth.set(0, CAM_H, -CAM_DIST);
   spawnEnemy('stray'); spawnEnemy('stray');
-  G.started = true;
+  G.started=true;
   canvas.requestPointerLock();
-  showMsg('Find bones! Bring them to your yellow den!', 4);
+  showMsg('Find bones! Bring them to your yellow den!',4);
 }
 
 // ─────────────────────────────────────────────
-// BOOT — build backdrop for start screen
+// BOOT (start screen backdrop)
 // ─────────────────────────────────────────────
-(function() {
-  var g = new THREE.PlaneGeometry(W*2+20, W*2+20);
-  var gnd = new THREE.Mesh(g, lmat(0x4A7C3E));
-  gnd.rotation.x = -Math.PI/2;
-  scene.add(gnd);
-  for (var i=0;i<10;i++) {
-    var a = i/10*Math.PI*2;
-    scene.add(makeTree(Math.cos(a)*18, Math.sin(a)*18));
-  }
-  cam.position.set(0, 8, 16);
-  cam.lookAt(0,0,0);
-})();
+buildTerrain();
+for(var i=0;i<12;i++){
+  var ang=i/12*Math.PI*2;
+  scene.add(mkTree(Math.cos(ang)*20,Math.sin(ang)*20,i%3));
+}
+for(var i=0;i<30;i++) scene.add(mkFlower(rnd(-18,18),rnd(-18,18)));
 
 requestAnimationFrame(loop);
 </script>
